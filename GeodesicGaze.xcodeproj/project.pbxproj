@@ -16,6 +16,7 @@
 		698609402C74DBB200CD3B0F /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6986093B2C74DBB200CD3B0F /* Shaders.metal */; };
 		698609412C74DBB200CD3B0F /* MultiCamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6986093C2C74DBB200CD3B0F /* MultiCamView.swift */; };
 		698609422C74DBB200CD3B0F /* MathFunctions.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6986093D2C74DBB200CD3B0F /* MathFunctions.metal */; };
+		69BF16822C74DE100008D537 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 69BF16812C74DE100008D537 /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +30,7 @@
 		6986093B2C74DBB200CD3B0F /* Shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		6986093C2C74DBB200CD3B0F /* MultiCamView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiCamView.swift; sourceTree = "<group>"; };
 		6986093D2C74DBB200CD3B0F /* MathFunctions.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = MathFunctions.metal; sourceTree = "<group>"; };
+		69BF16812C74DE100008D537 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,6 +72,7 @@
 				6986092D2C74DB2800CD3B0F /* ContentView.swift */,
 				6986092F2C74DB2A00CD3B0F /* Assets.xcassets */,
 				698609312C74DB2A00CD3B0F /* Preview Content */,
+				69BF16812C74DE100008D537 /* README.md */,
 			);
 			path = GeodesicGaze;
 			sourceTree = "<group>";
@@ -140,6 +143,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				69BF16822C74DE100008D537 /* README.md in Resources */,
 				698609332C74DB2A00CD3B0F /* Preview Assets.xcassets in Resources */,
 				698609302C74DB2A00CD3B0F /* Assets.xcassets in Resources */,
 			);
