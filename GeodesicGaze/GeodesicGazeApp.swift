@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct GeodesicGazeApp: App {
+struct MultiCamDemoApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

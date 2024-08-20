@@ -11,6 +11,11 @@
 		6986092E2C74DB2800CD3B0F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6986092D2C74DB2800CD3B0F /* ContentView.swift */; };
 		698609302C74DB2A00CD3B0F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6986092F2C74DB2A00CD3B0F /* Assets.xcassets */; };
 		698609332C74DB2A00CD3B0F /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 698609322C74DB2A00CD3B0F /* Preview Assets.xcassets */; };
+		6986093E2C74DBB200CD3B0F /* BhiMixer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698609392C74DBB200CD3B0F /* BhiMixer.swift */; };
+		6986093F2C74DBB200CD3B0F /* MultiCamCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6986093A2C74DBB200CD3B0F /* MultiCamCapture.swift */; };
+		698609402C74DBB200CD3B0F /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6986093B2C74DBB200CD3B0F /* Shaders.metal */; };
+		698609412C74DBB200CD3B0F /* MultiCamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6986093C2C74DBB200CD3B0F /* MultiCamView.swift */; };
+		698609422C74DBB200CD3B0F /* MathFunctions.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6986093D2C74DBB200CD3B0F /* MathFunctions.metal */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +24,11 @@
 		6986092D2C74DB2800CD3B0F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		6986092F2C74DB2A00CD3B0F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		698609322C74DB2A00CD3B0F /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		698609392C74DBB200CD3B0F /* BhiMixer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BhiMixer.swift; sourceTree = "<group>"; };
+		6986093A2C74DBB200CD3B0F /* MultiCamCapture.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiCamCapture.swift; sourceTree = "<group>"; };
+		6986093B2C74DBB200CD3B0F /* Shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
+		6986093C2C74DBB200CD3B0F /* MultiCamView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiCamView.swift; sourceTree = "<group>"; };
+		6986093D2C74DBB200CD3B0F /* MathFunctions.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = MathFunctions.metal; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,6 +61,11 @@
 		6986092A2C74DB2800CD3B0F /* GeodesicGaze */ = {
 			isa = PBXGroup;
 			children = (
+				698609392C74DBB200CD3B0F /* BhiMixer.swift */,
+				6986093D2C74DBB200CD3B0F /* MathFunctions.metal */,
+				6986093A2C74DBB200CD3B0F /* MultiCamCapture.swift */,
+				6986093C2C74DBB200CD3B0F /* MultiCamView.swift */,
+				6986093B2C74DBB200CD3B0F /* Shaders.metal */,
 				6986092B2C74DB2800CD3B0F /* GeodesicGazeApp.swift */,
 				6986092D2C74DB2800CD3B0F /* ContentView.swift */,
 				6986092F2C74DB2A00CD3B0F /* Assets.xcassets */,
@@ -137,8 +152,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6986093F2C74DBB200CD3B0F /* MultiCamCapture.swift in Sources */,
 				6986092E2C74DB2800CD3B0F /* ContentView.swift in Sources */,
+				698609412C74DBB200CD3B0F /* MultiCamView.swift in Sources */,
+				6986093E2C74DBB200CD3B0F /* BhiMixer.swift in Sources */,
 				6986092C2C74DB2800CD3B0F /* GeodesicGazeApp.swift in Sources */,
+				698609402C74DBB200CD3B0F /* Shaders.metal in Sources */,
+				698609422C74DBB200CD3B0F /* MathFunctions.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -275,6 +295,7 @@
 				DEVELOPMENT_TEAM = 53T58N547N;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "App requires camera";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -304,6 +325,7 @@
 				DEVELOPMENT_TEAM = 53T58N547N;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "App requires camera";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
