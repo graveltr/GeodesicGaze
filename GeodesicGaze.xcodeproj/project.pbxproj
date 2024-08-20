@@ -47,6 +47,7 @@
 		6986091F2C74DB2800CD3B0F = {
 			isa = PBXGroup;
 			children = (
+				69BF16812C74DE100008D537 /* README.md */,
 				6986092A2C74DB2800CD3B0F /* GeodesicGaze */,
 				698609292C74DB2800CD3B0F /* Products */,
 			);
@@ -72,7 +73,6 @@
 				6986092D2C74DB2800CD3B0F /* ContentView.swift */,
 				6986092F2C74DB2A00CD3B0F /* Assets.xcassets */,
 				698609312C74DB2A00CD3B0F /* Preview Content */,
-				69BF16812C74DE100008D537 /* README.md */,
 			);
 			path = GeodesicGaze;
 			sourceTree = "<group>";
