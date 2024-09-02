@@ -6,32 +6,9 @@
 //
 
 #include <metal_stdlib>
+#include "MathFunctions.h"
+
 using namespace metal;
-
-// Error code definitions
-#define DOMAIN_ERROR -1
-#define MAXITER_ERROR -2
-#define SUCCESS 0
-
-#define locMAX3(a,b,c) max(max(a, b), c)
-#define locMAX4(a,b,c,d) max(max(max(a, b), c), d)
-
-// Struct that stores the results of elliptic
-// integral calculations. Stores the computed
-// value (val), the error (err), and the return
-// code (status).
-struct EllintResult {
-    float val;
-    float err;
-    int status;
-};
-
-struct ElljacResult {
-    float sn;
-    float cn;
-    float dn;
-    int status;
-};
 
 // Return the sign of x.
 inline int gsl_sign(float x) {
