@@ -31,6 +31,18 @@ extension Array: BufferData where Element == Float {
     }
 }
 
+struct AnyBufferData: BufferData {
+    private let _createBuffer: (MTLDevice) -> MTLBuffer?
+    
+    init<T: BufferData>(_ bufferData: T) {
+        _createBuffer = bufferData.createBuffer
+    }
+    
+    func createBuffer(device: MTLDevice) -> MTLBuffer? {
+        return _createBuffer(device)
+    }
+}
+
 // TODO: more robust testing of elliptic F -> what happens outside the bounds?
 final class GeodesicGazeTests: XCTestCase {
 
@@ -86,9 +98,21 @@ final class GeodesicGazeTests: XCTestCase {
             0.9    // High-range modulus
         ]
         
+        let wrappedTestAngles = AnyBufferData(testAngles)
+        let wrappedTestModuli = AnyBufferData(testModuli)
+        let inputs: [AnyBufferData] = [wrappedTestAngles, wrappedTestModuli]
+        
+        let count = testAngles.count
+        let resultBufferSize = count * MemoryLayout<EllintResult>.size
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "ellint_F_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: EllintResult.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
         let expectedResults = readExpectedResults()
         
-        let gpuResults = runEllintFComputeShader(angles: testAngles, moduli: testModuli)
         for i in 0..<gpuResults.count {
             let gpuResult = gpuResults[i]
             let expectedResult = expectedResults[i]
@@ -97,47 +121,7 @@ final class GeodesicGazeTests: XCTestCase {
         }
     }
     
-    func runEllintFComputeShader(angles: [Float], moduli: [Float]) -> [EllintResult] {
-        let kernelFunction = library?.makeFunction(name: "ellint_F_compute_kernel")
-        computePipelineState = try! device.makeComputePipelineState(function: kernelFunction!)
-
-        let count = angles.count
-        let bufferSize = count * MemoryLayout<Float>.size
-        let resultBufferSize = count * MemoryLayout<EllintResult>.size
-
-        // Create buffers
-        let anglesBuffer = device.makeBuffer(bytes: angles, length: bufferSize, options: [])
-        let moduliBuffer = device.makeBuffer(bytes: moduli, length: bufferSize, options: [])
-        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
-
-        // Create a command buffer and compute command encoder
-        let commandBuffer = commandQueue.makeCommandBuffer()!
-        let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
-        computeEncoder.setComputePipelineState(computePipelineState)
-        computeEncoder.setBuffer(anglesBuffer, offset: 0, index: 0)
-        computeEncoder.setBuffer(moduliBuffer, offset: 0, index: 1)
-        computeEncoder.setBuffer(resultsBuffer, offset: 0, index: 2)
-
-        // Set the number of threads
-        let threadsPerThreadgroup = MTLSize(width: 8, height: 1, depth: 1)
-        let threadgroups = MTLSize(width: (count + threadsPerThreadgroup.width - 1) / threadsPerThreadgroup.width, 
-                                   height: 1,
-                                   depth: 1)
-        computeEncoder.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
-        computeEncoder.endEncoding()
-
-        // Commit and wait for completion
-        commandBuffer.commit()
-        commandBuffer.waitUntilCompleted()
-
-        // Read results
-        let resultsPointer = resultsBuffer?.contents().bindMemory(to: EllintResult.self, capacity: count)
-        let results = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
-
-        return results
-    }
-    
-    func runComputeShader(shaderName: String, inputs: [[BufferData]]) -> [MTLBuffer?] {
+    func runComputeShader(shaderName: String, inputs: [AnyBufferData], resultsBuffer: MTLBuffer) {
         let kernelFunction = library?.makeFunction(name: shaderName)
         computePipelineState = try! device.makeComputePipelineState(function: kernelFunction!)
 
@@ -147,33 +131,26 @@ final class GeodesicGazeTests: XCTestCase {
         computeEncoder.setComputePipelineState(computePipelineState)
         
         var buffers: [MTLBuffer?] = []
-        for (index, inputGroup) in inputs.enumerated() {
-            for input in inputGroup {
-                if let buffer = input.createBuffer(device: device) {
-                    computeEncoder.setBuffer(buffer, offset: 0, index: index)
-                    buffers.append(buffer)
-                } else {
-                    XCTFail("Failed to create buffer for input group \(index).")
-                }
+        for (index, input) in inputs.enumerated() {
+            if let buffer = input.createBuffer(device: device) {
+                computeEncoder.setBuffer(buffer, offset: 0, index: index)
+                buffers.append(buffer)
+            } else {
+                XCTFail("Failed to create buffer for input group \(index).")
             }
         }
+        
+        computeEncoder.setBuffer(resultsBuffer, offset: 0, index: inputs.count)
 
         // Set the number of threads
         let threadsPerThreadgroup = MTLSize(width: 8, height: 1, depth: 1)
-        let threadgroups = MTLSize(width: (inputs[0].count + threadsPerThreadgroup.width - 1) / threadsPerThreadgroup.width,
+        let threadgroups = MTLSize(width: (inputs.count + threadsPerThreadgroup.width - 1) / threadsPerThreadgroup.width,
                                    height: 1,
                                    depth: 1)
+        
         computeEncoder.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
         computeEncoder.endEncoding()
-
-        // Commit and wait for completion
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()
-
-        // Read results
-        // let resultsPointer = resultsBuffer?.contents().bindMemory(to: EllintResult.self, capacity: count)
-        // let results = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
-
-        return results
     }
 }
