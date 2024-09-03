@@ -8,14 +8,26 @@
 import MetalKit
 
 class BhiMixer {
+    
+    struct Uniforms {
+        var frontTextureWidth: Int32
+        var frontTextureHeight: Int32
+        var backTextureWidth: Int32
+        var backTextureHeight: Int32
+    }
+    
     var device: MTLDevice!
     var commandQueue: MTLCommandQueue!
     var textureCache: CVMetalTextureCache!
     var pipelineState: MTLRenderPipelineState!
     var frontYTexture: MTLTexture?
     var frontUVTexture: MTLTexture?
+    var frontTextureHeight: Int?
+    var frontTextureWidth: Int?
     var backYTexture: MTLTexture?
     var backUVTexture: MTLTexture?
+    var backTextureHeight: Int?
+    var backTextureWidth: Int?
 
     init(device: MTLDevice) {
         self.device = device
@@ -50,33 +62,48 @@ class BhiMixer {
             let textures = createTexture(from: frontCameraPixelBuffer)
             frontYTexture = textures?.0
             frontUVTexture = textures?.1
+            frontTextureWidth = textures?.2
+            frontTextureHeight = textures?.3
         }
         if let backCameraPixelBuffer = backCameraPixelBuffer {
             let textures = createTexture(from: backCameraPixelBuffer)
             backYTexture = textures?.0
             backUVTexture = textures?.1
+            backTextureWidth = textures?.2
+            backTextureHeight = textures?.3
         }
         
         guard let commandBuffer = commandQueue.makeCommandBuffer(),
               let renderPassDescriptor = view.currentRenderPassDescriptor,
               let frontYTexture = frontYTexture,
               let frontUVTexture = frontUVTexture,
+              let frontTextureWidth = frontTextureWidth,
+              let frontTextureHeight = frontTextureHeight,
               let backYTexture = backYTexture,
               let backUVTexture = backUVTexture,
+              let backTextureWidth = backTextureWidth,
+              let backTextureHeight = backTextureHeight,
               let drawable = view.currentDrawable else {
             print("returning from mix")
             return
         }
         print("Successfully created command buffer and render pass descriptor")
+        
+        var uniforms = Uniforms(frontTextureWidth: Int32(frontTextureWidth), 
+                                frontTextureHeight: Int32(frontTextureHeight),
+                                backTextureWidth: Int32(backTextureWidth),
+                                backTextureHeight: Int32(backTextureHeight))
+        let uniformsBuffer = device.makeBuffer(bytes: &uniforms, length: MemoryLayout<Uniforms>.size, options: .storageModeShared)
 
         let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
         renderEncoder.setRenderPipelineState(pipelineState)
+        renderEncoder.setFragmentBuffer(uniformsBuffer, offset: 0, index: 0)
         renderEncoder.setFragmentTexture(frontYTexture, index: 0)
         renderEncoder.setFragmentTexture(frontUVTexture, index: 1)
         renderEncoder.setFragmentTexture(backYTexture, index: 2)
         renderEncoder.setFragmentTexture(backUVTexture, index: 3)
         
-        print("Successfully set fragment textures")
+        print("Successfully set fragment textures and buffers")
 
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         
@@ -85,7 +112,10 @@ class BhiMixer {
         commandBuffer.commit()
     }
     
-    private func createTexture(from pixelBuffer: CVPixelBuffer) -> (MTLTexture?, MTLTexture?)? {
+    private func createTexture(from pixelBuffer: CVPixelBuffer) -> (MTLTexture?, 
+                                                                    MTLTexture?,
+                                                                    Int,
+                                                                    Int)? {
         let width = CVPixelBufferGetWidth(pixelBuffer)
         let height = CVPixelBufferGetHeight(pixelBuffer)
         
@@ -103,7 +133,7 @@ class BhiMixer {
         if yStatus == kCVReturnSuccess, uvStatus == kCVReturnSuccess {
             let yMetalTexture = CVMetalTextureGetTexture(yTexture!)
             let uvMetalTexture = CVMetalTextureGetTexture(uvTexture!)
-            return (yMetalTexture, uvMetalTexture)
+            return (yMetalTexture, uvMetalTexture, width, height)
         }
 
         print("Couldn't create texture")

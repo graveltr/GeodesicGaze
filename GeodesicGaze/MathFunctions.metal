@@ -584,35 +584,18 @@ EllintResult ellint_P(float phi, float k, float n, float errtol, float prec) {
     }
 }
 
-kernel void test_add(device const float *input1 [[ buffer(0) ]],
-                     device const float *input2 [[ buffer(1) ]],
-                     device float *output [[ buffer(2) ]],
-                     uint id [[ thread_position_in_grid ]]) {
-    output[id] = add(input1[id], input2[id]);
+float normalizeAngle(float phi) {
+    float twoPi = 2.0 * M_PI_F;
+    float modPhi = fmod(phi, twoPi);
+
+    // If the result is negative, add 2π to ensure it is in the range [0, 2π)
+    if (modPhi < 0) {
+        modPhi += twoPi;
+    }
+
+    return modPhi;
 }
 
-kernel void test_sn(device const float *input1 [[ buffer(0) ]],
-                        device const float *input2 [[ buffer(1) ]],
-                        device float *output [[ buffer(2) ]],
-                        uint id [[ thread_position_in_grid ]]) {
-    ElljacResult res = ellipj(input1[id], input2[id]);
-    output[id] = res.sn;
-}
-
-kernel void test_ellint_RF(device const float *input1 [[ buffer(0) ]],
-                           device const float *input2 [[ buffer(1) ]],
-                           device float *output [[ buffer(2) ]],
-                           uint id [[ thread_position_in_grid ]]) {
-    float errtol_high = 1e-7;
-    float errtol_moderate = 1e-5;
-    float errtol_low = 1e-3;
-    
-    float prec = 1e-3;
-    
-    // EllintResult res = ellint_RF(0.5, 1.0, 1.5, errtol_moderate);
-    // EllintResult res = ellint_RF(1.00, 2.00, 3.00, errtol_moderate);
-    // EllintResult res = ellint_F(0.5, 0.5, errtol_moderate);
-    // EllintResult res = ellint_F(1.0, 0.5, errtol_moderate);
-    EllintResult res = ellint_F(1.5, 0.5, errtol_moderate, prec);
-    output[id] = res.val;
+bool fEqual(float x, float y) {
+    return fabs(x - y) < FLT_EPSILON ? true : false;
 }
