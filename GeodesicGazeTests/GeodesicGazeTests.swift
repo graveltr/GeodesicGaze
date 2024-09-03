@@ -186,10 +186,10 @@ final class GeodesicGazeTests: XCTestCase {
     }
     
     func testPhiS() {
-        let M:  [Float] = [1.0, 1.0, 1.0]
-        let ro: [Float] = [30.0, 30.0, 30.0]
-        let rs: [Float] = [1000.0, 1000.0, 1000.0]
-        let b:  [Float] = [5.2, 5.31, 10.11]
+        let M:  [Float] = [1.0, 1.0, 1.0, 1.0]
+        let ro: [Float] = [30.0, 30.0, 30.0, 30.0]
+        let rs: [Float] = [1000.0, 1000.0, 1000.0, 1000.0]
+        let b:  [Float] = [5.2, 5.31, 10.11, 21.2132034355]
         
         let wrappedM = AnyBufferData(M)
         let wrappedro = AnyBufferData(ro)
@@ -209,7 +209,8 @@ final class GeodesicGazeTests: XCTestCase {
         let expectedResults = [
             PhiSResult(val: 9.7726,     status: 0),
             PhiSResult(val: 6.42818,    status: 0),
-            PhiSResult(val: 3.3687,     status: 0)
+            PhiSResult(val: 3.3687,     status: 0),
+            PhiSResult(val: 2.56081019, status: 0)
         ]
         
         for i in 0..<gpuResults.count {
@@ -220,8 +221,86 @@ final class GeodesicGazeTests: XCTestCase {
         }
     }
     
-    func testSchwarzchildLense() {
+    func testNormalizeAngle() {
+        let phi:      [Float] = [2.56081019]
         
+        let wrappedphi = AnyBufferData(phi)
+        let inputs: [AnyBufferData] = [wrappedphi]
+        
+        let count = phi.count
+        let resultBufferSize = count * MemoryLayout<Float>.size
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "normalize_angle_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: Float.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults: [Float] = [2.56081019]
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            XCTAssertEqual(gpuResult, expectedResult, accuracy: 1e-3, "Value mismatch at index \(i)")
+        }
+    }
+    
+    func testTestFunction() {
+        let normalizedAngle: [Float] = [2.56081019]
+        
+        let wrappedangle = AnyBufferData(normalizedAngle)
+        let inputs: [AnyBufferData] = [wrappedangle]
+        
+        let count = normalizedAngle.count
+        let resultBufferSize = count * MemoryLayout<Float>.size
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "test_function_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: Int32.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults: [Int32] = [2]
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            XCTAssertEqual(gpuResult, expectedResult, "Value mismatch at index \(i)")
+        }
+    }
+
+    func testSchwarzchildLense() {
+        let M:      [Float] = [1.0]
+        let ro:     [Float] = [30.0]
+        let rs:     [Float] = [1000.0]
+        let varphi: [Float] = [Float.pi / 4.0]
+        
+        let wrappedM = AnyBufferData(M)
+        let wrappedro = AnyBufferData(ro)
+        let wrappedrs = AnyBufferData(rs)
+        let wrappedvarphi = AnyBufferData(varphi)
+        let inputs: [AnyBufferData] = [wrappedM, wrappedro, wrappedrs, wrappedvarphi]
+        
+        let count = M.count
+        let resultBufferSize = count * MemoryLayout<SchwarzschildLenseResult>.size
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "schwarzschild_lense_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: SchwarzschildLenseResult.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults = [
+            SchwarzschildLenseResult(varphitilde: 0.56472623, ccw: false, status: 0)
+        ]
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            XCTAssertEqual(gpuResult.varphitilde, expectedResult.varphitilde, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.ccw, expectedResult.ccw, "CCW mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.status, expectedResult.status, "Non SUCCESSful status code at index \(i)")
+        }
     }
 
     func runComputeShader(shaderName: String, inputs: [AnyBufferData], resultsBuffer: MTLBuffer) {

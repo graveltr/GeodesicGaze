@@ -149,25 +149,24 @@ SchwarzschildLenseResult schwarzschildLense(float M, float ro, float rs, float v
     } else {
         assert(false);
     }
-    
+    result.ccw = ccw;
+
     // Use the law of cosines to obtain the missing side length
     float AC = sqrt(ro * ro + rs * rs - 2 * ro * rs * cos(ABC));
     
     // Two possibilities when using asin
     float BCA = 0.0;
-    float BCA1 = asin((sin(normalizedAngle) / AC) * rs);
+    float BCA1 = asin((sin(ABC) / AC) * rs);
     float BCA2 = M_PI_F - BCA1;
     
     // To determine which is the angle of the triangle, check
-    // the law of sines for all sides.
-    if (fEqual(AC / sin(normalizedAngle), rs / sin(BCA1)) &&
-        fEqual(AC / sin(normalizedAngle), ro / sin(M_PI_F - (BCA1 + normalizedAngle)))) {
-        BCA = BCA1;
-    } else {
-        BCA = BCA2;
-    }
+    // the law of sines for all sides. You will run into
+    // precision issues when checking for equality, so pick the
+    // one that is closest.
+    float diff1 = fabs((AC / sin(ABC)) - (ro / sin(M_PI_F - (BCA1 + ABC))));
+    float diff2 = fabs((AC / sin(ABC)) - (ro / sin(M_PI_F - (BCA2 + ABC))));
     
-    result.varphitilde = BCA;
+    result.varphitilde = diff1 < diff2 ? BCA1 : BCA2;
     result.status = SUCCESS;
     return result;
 }

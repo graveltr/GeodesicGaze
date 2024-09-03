@@ -34,6 +34,12 @@ kernel void phiS_compute_kernel(const device float *M [[buffer(0)]],
     results[id] = phiS(M[id], ro[id], rs[id], b[id]);
 }
 
+kernel void normalize_angle_compute_kernel(const device float *phi [[buffer(0)]],
+                                           device float *results [[buffer(1)]],
+                                           uint id [[thread_position_in_grid]]) {
+    results[id] = normalizeAngle(phi[id]);
+}
+
 kernel void schwarzschild_lense_compute_kernel(const device float *M [[buffer(0)]],
                                                const device float *ro [[buffer(1)]],
                                                const device float *rs [[buffer(2)]],
