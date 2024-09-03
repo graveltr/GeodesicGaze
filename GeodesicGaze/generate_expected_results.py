@@ -2,7 +2,7 @@ import numpy as np
 from scipy.special import ellipkinc
 
 def elliptic_integral_f(phi, k):
-    value = ellipkinc(phi, k*k)
+    value = ellipkinc(phi, k)
     error = 0.01
     status = 0
 

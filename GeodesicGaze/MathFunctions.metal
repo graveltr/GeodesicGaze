@@ -426,6 +426,9 @@ EllintResult ellint_Kcomp(float k, float errtol, float prec) {
 }
 
 // Incomplete elliptic integral of the first kind, F
+// The convention IS NOT THE SAME AS PYTHON OR
+// MATHEMATICA. The difference is that they compute
+// F(phi, k^2).
 EllintResult ellint_F(float phi, float k, float errtol, float prec) {
     EllintResult result;
 

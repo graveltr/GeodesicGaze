@@ -11,16 +11,17 @@
 
 using namespace metal;
 
-
-struct PhiSResult {
-    float val;
-    int status;
-};
-
-// The roots of the radial potential
+// The roots of the radial potential.
+// ASSUMPTION: We assume that the caller
+// ensures bc < b => bc / b < 1 such that
+// we don't encounter domain issues with
+// arctrig functions.
 float4 radialRoots(float M, float b) {
     float bc = 3.0 * sqrt(3.0) * M;
     
+    assert(bc < b);
+    assert(bc < b);
+
     float r1 = (-2.0 * b / sqrt(3.0)) * cos((1.0 / 3.0) * acos(bc / b));
     float r2 = 0.0;
     float r3 = (2.0 * b / sqrt(3.0)) * sin((1.0 / 3.0) * asin(bc / b));
@@ -29,11 +30,10 @@ float4 radialRoots(float M, float b) {
     return float4(r1, r2, r3, r4);
 }
 
-// TODO: verify that this expression, including conventions, is exactly correct
-// TODO: ensure proper error handling, no divide by zeros, etc.
 EllintResult mathcalF(float M, float r, float b, float modulus) {
-    float4 roots = radialRoots(M, b);
+    assert(0 <= modulus);
     
+    float4 roots = radialRoots(M, b);
     float r1 = roots[0];
     float r2 = roots[1];
     float r3 = roots[2];
@@ -41,12 +41,14 @@ EllintResult mathcalF(float M, float r, float b, float modulus) {
     
     float arg = asin(sqrt(((r - r4) / (r - r3)) * ((r3 - r1) / (r4 - r1))));
     
-    return ellint_F(arg, modulus, 1e-5, 1e-5);
+    return ellint_F(arg, sqrt(modulus), 1e-5, 1e-5);
 }
 
 PhiSResult phiS(float M, float ro, float rs, float b) {
     PhiSResult result;
     
+    // Note that phiS is only called when bc < b, such that
+    // radialRoots requirements are met.
     float4 roots = radialRoots(M, b);
     
     float r1 = roots[0];
@@ -85,6 +87,13 @@ SchwarzschildLenseResult schwarzschildLense(float M, float ro, float rs, float v
     */
     
     float b = ro * sin(varphi);
+    
+    // If we have b < bc, then the photon trajectory enters the horizon.
+    float bc = 3.0 * sqrt(3.0) * M;
+    if (b < bc) {
+        result.status = EMITTED_FROM_BLACK_HOLE;
+        return result;
+    }
     
     /*
     * The value of lambda is the initial angular momenta of the light ray.

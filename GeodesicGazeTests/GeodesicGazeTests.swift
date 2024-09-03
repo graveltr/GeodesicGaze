@@ -8,6 +8,7 @@
 @testable import GeodesicGaze
 import XCTest
 import Metal
+import simd
 
 struct EllintResult {
     var val: Float
@@ -18,6 +19,11 @@ struct EllintResult {
 struct SchwarzschildLenseResult {
     var varphitilde: Float
     var ccw: Bool
+    var status: Int32
+}
+
+struct PhiSResult {
+    var val: Float
     var status: Int32
 }
 
@@ -43,7 +49,6 @@ struct AnyBufferData: BufferData {
     }
 }
 
-// TODO: more robust testing of elliptic F -> what happens outside the bounds?
 final class GeodesicGazeTests: XCTestCase {
 
     var device: MTLDevice!
@@ -79,7 +84,7 @@ final class GeodesicGazeTests: XCTestCase {
         return expectedResults
     }
     
-    func testEllintF() {
+    func testEllintFInBounds() {
         let testAngles: [Float] = [
             0.0,            // Lower boundary
             0.1,            // Small angle
@@ -121,6 +126,104 @@ final class GeodesicGazeTests: XCTestCase {
         }
     }
     
+    func testEllintFOutOfBounds() {
+        let testAngles: [Float] = [Float.pi / 2.0]
+        let testModuli: [Float] = [sqrt(2)]
+        
+        let wrappedTestAngles = AnyBufferData(testAngles)
+        let wrappedTestModuli = AnyBufferData(testModuli)
+        let inputs: [AnyBufferData] = [wrappedTestAngles, wrappedTestModuli]
+        
+        let count = testAngles.count
+        let resultBufferSize = count * MemoryLayout<EllintResult>.size
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "ellint_F_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: EllintResult.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let result1 = EllintResult(val: 0.0, err: 0.0, status: -1)
+        let expectedResults = [result1]
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            XCTAssertEqual(gpuResult.status, expectedResult.status, "Unexpected status code at index \(i)")
+        }
+    }
+    
+    func testRadialRoots() {
+        let M: [Float] = [1.0, 1.0, 1.0]
+        let b: [Float] = [5.2, 5.31, 10.11]
+        
+        let wrappedM = AnyBufferData(M)
+        let wrappedb = AnyBufferData(b)
+        let inputs: [AnyBufferData] = [wrappedM, wrappedb]
+        
+        let count = M.count
+        let resultBufferSize = count * MemoryLayout<simd_float4>.size
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "radial_roots_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: simd_float4.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        // Generated via Mathematica
+        let expectedResults = [simd_float4(-6.00395, 0, 2.93529, 3.06866),
+                               simd_float4(-6.11681, 0, 2.69151, 3.42529),
+                               simd_float4(-10.9914, 0, 2.08922, 8.90217)]
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            XCTAssertEqual(gpuResult[0], expectedResult[0], accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult[1], expectedResult[1], accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult[2], expectedResult[2], accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult[3], expectedResult[3], accuracy: 1e-3, "Value mismatch at index \(i)")
+        }
+    }
+    
+    func testPhiS() {
+        let M:  [Float] = [1.0, 1.0, 1.0]
+        let ro: [Float] = [30.0, 30.0, 30.0]
+        let rs: [Float] = [1000.0, 1000.0, 1000.0]
+        let b:  [Float] = [5.2, 5.31, 10.11]
+        
+        let wrappedM = AnyBufferData(M)
+        let wrappedro = AnyBufferData(ro)
+        let wrappedrs = AnyBufferData(rs)
+        let wrappedb = AnyBufferData(b)
+        let inputs: [AnyBufferData] = [wrappedM, wrappedro, wrappedrs, wrappedb]
+        
+        let count = M.count
+        let resultBufferSize = count * MemoryLayout<PhiSResult>.size
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "phiS_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: PhiSResult.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults = [
+            PhiSResult(val: 9.7726,     status: 0),
+            PhiSResult(val: 6.42818,    status: 0),
+            PhiSResult(val: 3.3687,     status: 0)
+        ]
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            XCTAssertEqual(gpuResult.val, expectedResult.val, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.status, expectedResult.status, "Non SUCCESSful status code at index \(i)")
+        }
+    }
+    
+    func testSchwarzchildLense() {
+        
+    }
+
     func runComputeShader(shaderName: String, inputs: [AnyBufferData], resultsBuffer: MTLBuffer) {
         let kernelFunction = library?.makeFunction(name: shaderName)
         computePipelineState = try! device.makeComputePipelineState(function: kernelFunction!)

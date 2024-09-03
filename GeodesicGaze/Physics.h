@@ -8,11 +8,22 @@
 #ifndef Physics_h
 #define Physics_h
 
+#define EMITTED_FROM_BLACK_HOLE 3
+
 struct SchwarzschildLenseResult {
     float varphitilde;
     bool ccw;
     int status;
 };
+
+struct PhiSResult {
+    float val;
+    int status;
+};
+
+float4 radialRoots(float M, float b);
+
+PhiSResult phiS(float M, float ro, float rs, float b);
 
 /*
 * Given an angle of incidence varphi, an observer radius, and a source radius,

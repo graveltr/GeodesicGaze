@@ -60,7 +60,7 @@ float3 sampleYUVTexture(texture2d<float, access::sample> YTexture,
 
 // TODO: Make sure it does the math properly for either orientation
 // TODO: Ensure consistency of camel case and underscores
-// TODO: Add front facing camera logic -> will need to do two ray traces
+// TODO: Add front facing camera logic -> don't need to do multiple ray traces, just need to
 fragment float4 fragmentShader(VertexOut in [[stage_in]],
                                texture2d<float, access::sample> frontYTexture [[texture(0)]],
                                texture2d<float, access::sample> frontUVTexture [[texture(1)]],
@@ -82,7 +82,7 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
     
     // Calculate the pixel coordinates of the current fragment
     float2 pixelCoords = in.texCoord * float2(uniforms.backTextureWidth, uniforms.backTextureHeight);
-   
+    
     // Calculate the pixel coordinates of the center of the image
     float2 center = float2(uniforms.backTextureWidth / 2.0, uniforms.backTextureHeight / 2.0);
     
@@ -100,6 +100,8 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
     if (lenseResult.status == FAILURE) {
         // color errored pixels solid red
         return float4(1.0, 0.0, 0.0, 1.0);
+    } else if (lenseResult.status == EMITTED_FROM_BLACK_HOLE) {
+        return float4(0.0, 0.0, 0.0, 1.0);
     }
     float varphitilde = lenseResult.varphitilde;
     bool ccw = lenseResult.ccw;
