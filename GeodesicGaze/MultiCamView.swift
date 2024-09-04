@@ -36,19 +36,38 @@ struct MultiCamView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         let viewController = UIViewController()
         
-        let videoViewHeight = viewController.view.bounds.height / 3
+        // let videoViewHeight = viewController.view.bounds.height / 3
         
         // Configure the views.
+        /*
         let frontView = UIView(frame: CGRect(x: 0, y: 0, width: viewController.view.bounds.width, height: videoViewHeight))
         let backView = UIView(frame: CGRect(x: 0, y: videoViewHeight, width: viewController.view.bounds.width, height: videoViewHeight))
         let mtkView = context.coordinator.mtkView
         mtkView.frame = CGRect(x: 0, y: 2 * videoViewHeight, width: viewController.view.bounds.width, height: videoViewHeight)
+        */
         
+        let lensedViewHeight = viewController.view.bounds.height * 0.8;
+        let previewViewHeight = viewController.view.bounds.height * 0.2;
+        
+        let frontView = UIView(frame: CGRect(x: 0,
+                                             y: 0,
+                                             width: viewController.view.bounds.width / 2,
+                                             height: previewViewHeight))
+        let backView = UIView(frame: CGRect(x: viewController.view.bounds.width / 2,
+                                            y: 0,
+                                            width: viewController.view.bounds.width,
+                                            height: previewViewHeight))
+        
+        let mtkView = context.coordinator.mtkView
+        mtkView.frame = CGRect(x: 0, 
+                               y: previewViewHeight,
+                               width: viewController.view.bounds.width,
+                               height: lensedViewHeight)
+
         viewController.view.addSubview(frontView)
         viewController.view.addSubview(backView)
         viewController.view.addSubview(mtkView)
 
-       
         let multiCamCapture = context.coordinator.multiCamCapture
         multiCamCapture.setupPreviewLayers(frontView: frontView, backView: backView)
         multiCamCapture.delegate = context.coordinator
