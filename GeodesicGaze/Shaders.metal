@@ -70,12 +70,13 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
                                sampler s [[sampler(0)]]) {
     // The focal length of the camera in pixels
     // TODO: should be one for each camera!
-    float focalLength = 3825.0;
-    
+    // float focalLength = 3825.0;
+    float focalLength = 2500.0;
+
     // Some other parameters.
     // TODO: set these parameters via the UI
     float M = 1.0;
-    float rs = 1000.0;
+    float rs = 100;
     float ro = 30.0;
     
     // TODO: parse what follows into a function that can be called on both front and back texture

@@ -49,13 +49,13 @@ struct MultiCamView: UIViewControllerRepresentable {
         let lensedViewHeight = viewController.view.bounds.height * 0.8;
         let previewViewHeight = viewController.view.bounds.height * 0.2;
         
-        let frontView = UIView(frame: CGRect(x: 0,
+        let frontView = UIView(frame: CGRect(x: viewController.view.bounds.width / 2,
                                              y: 0,
-                                             width: viewController.view.bounds.width / 2,
+                                             width: viewController.view.bounds.width,
                                              height: previewViewHeight))
-        let backView = UIView(frame: CGRect(x: viewController.view.bounds.width / 2,
+        let backView = UIView(frame: CGRect(x: 0,
                                             y: 0,
-                                            width: viewController.view.bounds.width,
+                                            width: viewController.view.bounds.width / 2,
                                             height: previewViewHeight))
         
         let mtkView = context.coordinator.mtkView
@@ -63,7 +63,7 @@ struct MultiCamView: UIViewControllerRepresentable {
                                y: previewViewHeight,
                                width: viewController.view.bounds.width,
                                height: lensedViewHeight)
-
+        
         viewController.view.addSubview(frontView)
         viewController.view.addSubview(backView)
         viewController.view.addSubview(mtkView)

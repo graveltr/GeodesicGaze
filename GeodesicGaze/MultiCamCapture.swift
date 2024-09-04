@@ -111,11 +111,11 @@ class MultiCamCapture: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     
     func setupPreviewLayers(frontView: UIView, backView: UIView) {
         logger.info("Setting up preview layers ...")
-        frontCameraPreviewLayer.videoGravity = .resizeAspectFill
+        frontCameraPreviewLayer.videoGravity = .resizeAspect
         frontCameraPreviewLayer.frame = frontView.bounds
         frontView.layer.addSublayer(frontCameraPreviewLayer)
         
-        backCameraPreviewLayer.videoGravity = .resizeAspectFill
+        backCameraPreviewLayer.videoGravity = .resizeAspect
         backCameraPreviewLayer.frame = backView.bounds
         backView.layer.addSublayer(backCameraPreviewLayer)
     }
