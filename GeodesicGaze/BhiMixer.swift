@@ -39,13 +39,13 @@ class BhiMixer {
     private func setupPipeline() {
         let library = device.makeDefaultLibrary()
         let vertexFunction = library?.makeFunction(name: "vertexShader")
-        let fragmentFunction = library?.makeFunction(name: "fragmentShader")
+        let fragmentFunction = library?.makeFunction(name: "dominicFragmentShader")
         
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.vertexFunction = vertexFunction
         pipelineDescriptor.fragmentFunction = fragmentFunction
         pipelineDescriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
-        
+
         do {
             pipelineState = try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
             print("Pipeline state created successfully")
@@ -94,6 +94,15 @@ class BhiMixer {
                                 backTextureWidth: Int32(backTextureWidth),
                                 backTextureHeight: Int32(backTextureHeight))
         let uniformsBuffer = device.makeBuffer(bytes: &uniforms, length: MemoryLayout<Uniforms>.size, options: .storageModeShared)
+
+        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0)
+        renderPassDescriptor.colorAttachments[0].loadAction = .clear
+        renderPassDescriptor.colorAttachments[0].storeAction = .store
+        
+        if renderPassDescriptor.colorAttachments[0].texture == nil {
+            print("texture is null")
+            return
+        }
 
         let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
         renderEncoder.setRenderPipelineState(pipelineState)

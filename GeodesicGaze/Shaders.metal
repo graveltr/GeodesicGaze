@@ -28,16 +28,16 @@ struct Uniforms {
 vertex VertexOut vertexShader(uint vertexID [[vertex_id]]) {
     float4 positions[4] = {
         float4(-1.0,  1.0, 0.0, 1.0),
-        float4(-1.0, -1.0, 0.0, 1.0),
         float4( 1.0,  1.0, 0.0, 1.0),
+        float4(-1.0, -1.0, 0.0, 1.0),
         float4( 1.0, -1.0, 0.0, 1.0)
     };
     
     float2 texCoords[4] = {
-        float2(0.0, 0.0),
-        float2(1.0, 0.0),
         float2(0.0, 1.0),
-        float2(1.0, 1.0)
+        float2(0.0, 0.0),
+        float2(1.0, 1.0),
+        float2(1.0, 0.0)
     };
     
     VertexOut out;
@@ -71,15 +71,13 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
     // The focal length of the camera in pixels
     // TODO: should be one for each camera!
     // float focalLength = 3825.0;
-    float focalLength = 2500.0;
+    float focalLength = 3825.0;
 
     // Some other parameters.
     // TODO: set these parameters via the UI
-    float M = 1.0;
-    float rs = 100;
+    float M = 0.1;
+    float rs = 100.0;
     float ro = 30.0;
-    
-    // TODO: parse what follows into a function that can be called on both front and back texture
     
     // Calculate the pixel coordinates of the current fragment
     float2 pixelCoords = in.texCoord * float2(uniforms.backTextureWidth, uniforms.backTextureHeight);
@@ -97,7 +95,19 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
     float varphi = atan2(dist, focalLength);
     float psi = atan2(relativePixelCoords.y, relativePixelCoords.x);
     
-    SchwarzschildLenseResult lenseResult = schwarzschildLense(M, ro, rs, varphi);
+    /*
+    * In flat space, geodesics traverse straight lines. From trig,
+    * it is obvious that ro sin(varphi) is the distance of closest
+    * approach for a light ray launched from ro with incidence varphi.
+    * The distance of closest approach, by definition is a radial turning
+    * point, so it must lie in the set of roots of R(r).
+    * Further, the roots of the radial potential are +- lambda, from
+    * which we deduce that b = | lambda | = ro sin(varphi).
+    */
+    
+    float b = ro * sin(varphi);
+
+    SchwarzschildLenseResult lenseResult = schwarzschildLense(M, ro, rs, b);
     if (lenseResult.status == FAILURE) {
         // color errored pixels solid red
         return float4(1.0, 0.0, 0.0, 1.0);
@@ -149,5 +159,69 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
         rgb = sampleYUVTexture(backYTexture, backUVTexture, transformedTexCoord);
     }
     
+    return float4(rgb, 1.0);
+}
+
+fragment float4 dominicFragmentShader(VertexOut in [[stage_in]],
+                               texture2d<float, access::sample> frontYTexture [[texture(0)]],
+                               texture2d<float, access::sample> frontUVTexture [[texture(1)]],
+                               texture2d<float, access::sample> backYTexture [[texture(2)]],
+                               texture2d<float, access::sample> backUVTexture [[texture(3)]],
+                               constant Uniforms &uniforms [[buffer(0)]],
+                               sampler s [[sampler(0)]]) {
+    // We let rs and ro be large in this set up.
+    // This will allow for the usage of an approximation to the
+    // elliptic integrals during lensing.
+    float M = 1;
+    float rs = 1000.0;
+    float ro = 1000.0;
+    
+    // Calculate the pixel coordinates of the current fragment
+    float2 pixelCoords = in.texCoord * float2(uniforms.backTextureWidth, uniforms.backTextureHeight);
+    
+    // Calculate the pixel coordinates of the center of the image
+    float2 center = float2(uniforms.backTextureWidth / 2.0, uniforms.backTextureHeight / 2.0);
+    
+    // Place the center at the origin
+    float2 relativePixelCoords = pixelCoords - center;
+    
+    // Convert the pixel coordinates to coordinates in the image plane
+    float lengthPerPixel = 0.1;
+    float2 imagePlaneCoords = lengthPerPixel * relativePixelCoords;
+   
+    // Obtain the polar coordinates of this image plane location
+    float b = length(imagePlaneCoords);
+    float psi = atan2(imagePlaneCoords.y, imagePlaneCoords.x);
+
+    SchwarzschildLenseResult lenseResult = schwarzschildLense(M, ro, rs, b);
+    if (lenseResult.status == FAILURE) {
+        // Color errored pixels solid red
+        return float4(1.0, 0.0, 0.0, 1.0);
+    } else if (lenseResult.status == EMITTED_FROM_BLACK_HOLE) {
+        return float4(0.0, 0.0, 0.0, 1.0);
+    }
+    float varphitilde = lenseResult.varphitilde;
+    bool ccw = lenseResult.ccw;
+
+    // Front-facing camera
+    // TODO: implement (use a symmetric setup)
+    if (M_PI_F / 2.0 < varphitilde) {
+        return float4(0.0, 1.0, 0.0, 1.0);
+    }
+    
+    // Unwind through the inverse transformation to texture coordinates
+    float btilde = ro * sin(varphitilde);
+    float2 transformedImagePlaneCoords = (ccw ? -1.0 : 1.0) * float2(btilde * cos(psi), btilde * sin(psi));
+    float2 transformedRelativePixelCoords = transformedImagePlaneCoords / lengthPerPixel;
+    float2 transformedPixelCoords = transformedRelativePixelCoords + center;
+    float2 transformedTexCoord = transformedPixelCoords / float2(uniforms.backTextureWidth, uniforms.backTextureHeight);
+
+    // Ensure that the texture coordinate is inbounds
+    if (transformedTexCoord.x < 0.0 || 1.0 < transformedTexCoord.x ||
+        transformedTexCoord.y < 0.0 || 1.0 < transformedTexCoord.y) {
+        return float4(0.0, 0.0, 1.0, 1.0);
+    }
+    
+    float3 rgb = sampleYUVTexture(backYTexture, backUVTexture, transformedTexCoord);
     return float4(rgb, 1.0);
 }

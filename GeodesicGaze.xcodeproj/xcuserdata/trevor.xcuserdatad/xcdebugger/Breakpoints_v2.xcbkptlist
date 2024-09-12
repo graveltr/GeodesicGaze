@@ -7,17 +7,17 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "1DB874A2-FAE3-4768-B3D9-87957612B820"
+            uuid = "0BF6FA05-9DD0-40A2-853C-0D4F39C8687B"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "GeodesicGaze/Physics.metal"
+            filePath = "GeodesicGaze/BhiMixer.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "122"
-            endingLineNumber = "122"
-            landmarkName = "schwarzschildLense(float M, float ro, float rs, float varphi)"
-            landmarkType = "9">
+            startingLineNumber = "106"
+            endingLineNumber = "106"
+            landmarkName = "mix(frontCameraPixelBuffer:backCameraPixelBuffer:in:)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

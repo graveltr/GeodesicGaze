@@ -245,41 +245,18 @@ final class GeodesicGazeTests: XCTestCase {
         }
     }
     
-    func testTestFunction() {
-        let normalizedAngle: [Float] = [2.56081019]
-        
-        let wrappedangle = AnyBufferData(normalizedAngle)
-        let inputs: [AnyBufferData] = [wrappedangle]
-        
-        let count = normalizedAngle.count
-        let resultBufferSize = count * MemoryLayout<Float>.size
-        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
-
-        runComputeShader(shaderName: "test_function_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
-        
-        let resultsPointer = resultsBuffer?.contents().bindMemory(to: Int32.self, capacity: count)
-        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
-        
-        let expectedResults: [Int32] = [2]
-        
-        for i in 0..<gpuResults.count {
-            let gpuResult = gpuResults[i]
-            let expectedResult = expectedResults[i]
-            XCTAssertEqual(gpuResult, expectedResult, "Value mismatch at index \(i)")
-        }
-    }
-
     func testSchwarzchildLense() {
         let M:      [Float] = [1.0]
         let ro:     [Float] = [30.0]
         let rs:     [Float] = [1000.0]
         let varphi: [Float] = [Float.pi / 4.0]
+        let bs: [Float] = [30.0 * sin(Float.pi / 4.0)]
         
         let wrappedM = AnyBufferData(M)
         let wrappedro = AnyBufferData(ro)
         let wrappedrs = AnyBufferData(rs)
-        let wrappedvarphi = AnyBufferData(varphi)
-        let inputs: [AnyBufferData] = [wrappedM, wrappedro, wrappedrs, wrappedvarphi]
+        let wrappedbs = AnyBufferData(bs)
+        let inputs: [AnyBufferData] = [wrappedM, wrappedro, wrappedrs, wrappedbs]
         
         let count = M.count
         let resultBufferSize = count * MemoryLayout<SchwarzschildLenseResult>.size

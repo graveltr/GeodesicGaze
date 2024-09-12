@@ -73,20 +73,8 @@ PhiSResult phiS(float M, float ro, float rs, float b) {
     return result;
 }
 
-SchwarzschildLenseResult schwarzschildLense(float M, float ro, float rs, float varphi) {
+SchwarzschildLenseResult schwarzschildLense(float M, float ro, float rs, float b) {
     SchwarzschildLenseResult result;
-    
-    /*
-    * In flat space, geodesics traverse straight lines. From trig,
-    * it is obvious that ro sin(varphi) is the distance of closest
-    * approach for a light ray launched from ro with incidence varphi.
-    * The distance of closest approach, by definition is a radial turning
-    * point, so it must lie in the set of roots of R(r).
-    * Further, the roots of the radial potential are +- lambda, from
-    * which we deduce that b = | lambda | = ro sin(varphi).
-    */
-    
-    float b = ro * sin(varphi);
     
     // If we have b < bc, then the photon trajectory enters the horizon.
     float bc = 3.0 * sqrt(3.0) * M;
@@ -155,7 +143,6 @@ SchwarzschildLenseResult schwarzschildLense(float M, float ro, float rs, float v
     float AC = sqrt(ro * ro + rs * rs - 2 * ro * rs * cos(ABC));
     
     // Two possibilities when using asin
-    float BCA = 0.0;
     float BCA1 = asin((sin(ABC) / AC) * rs);
     float BCA2 = M_PI_F - BCA1;
     

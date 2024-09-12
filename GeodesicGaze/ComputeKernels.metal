@@ -43,8 +43,8 @@ kernel void normalize_angle_compute_kernel(const device float *phi [[buffer(0)]]
 kernel void schwarzschild_lense_compute_kernel(const device float *M [[buffer(0)]],
                                                const device float *ro [[buffer(1)]],
                                                const device float *rs [[buffer(2)]],
-                                               const device float *varphi [[buffer(3)]],
+                                               const device float *b [[buffer(3)]],
                                                device SchwarzschildLenseResult *results [[buffer(4)]],
                                                uint id [[thread_position_in_grid]]) {
-    results[id] = schwarzschildLense(M[id], ro[id], rs[id], varphi[id]);
+    results[id] = schwarzschildLense(M[id], ro[id], rs[id], b[id]);
 }

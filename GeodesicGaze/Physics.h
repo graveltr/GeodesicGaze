@@ -26,13 +26,16 @@ float4 radialRoots(float M, float b);
 PhiSResult phiS(float M, float ro, float rs, float b);
 
 /*
-* Given an angle of incidence varphi, an observer radius, and a source radius,
+* Given a conserved value of b (angular momentum), an observer radius, and a source radius,
 * determine the point at which a null geodesic in Schwarzschild would intersect
 * the source radius, if fired from the observer.
 *
 * Then compute the angle of incidence that a light ray would have in flat space,
 * such that it intersects this point, and return that value.
+*
+* The returned angle of incidence is about the line of sight. The boolean value
+* ccw indicates whether it is clockwise or counter-clockwise.
 */
-SchwarzschildLenseResult schwarzschildLense(float M, float ro, float rs, float varphi);
+SchwarzschildLenseResult schwarzschildLense(float M, float ro, float rs, float b);
 
 #endif /* Physics_h */
