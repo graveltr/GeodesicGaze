@@ -64,8 +64,8 @@ final class GeodesicGazeTests: XCTestCase {
         
     }
     
-    func readExpectedResults() -> [EllintResult] {
-        guard let fileURL = Bundle(for: type(of: self)).url(forResource: "expected_results", withExtension: "txt") else {
+    func readExpectedResults(filename: String) -> [EllintResult] {
+        guard let fileURL = Bundle(for: type(of: self)).url(forResource: filename, withExtension: "txt") else {
             fatalError("Expected results file not found")
         }
         
@@ -116,7 +116,7 @@ final class GeodesicGazeTests: XCTestCase {
         let resultsPointer = resultsBuffer?.contents().bindMemory(to: EllintResult.self, capacity: count)
         let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
         
-        let expectedResults = readExpectedResults()
+        let expectedResults = readExpectedResults(filename: "expected_ellipticf_results")
         
         for i in 0..<gpuResults.count {
             let gpuResult = gpuResults[i]
@@ -153,6 +153,100 @@ final class GeodesicGazeTests: XCTestCase {
         }
     }
     
+    func testEllintEInBounds() {
+        let testAngles: [Float] = [
+            0.0,            // Lower boundary
+            0.1,            // Small angle
+            0.5,            // Mid-range angle
+            1.0,            // Larger angle
+            1.5,            // Near upper boundary (π/2)
+            Float.pi / 4   // π/4 (45 degrees)
+        ]
+
+        let testModuli: [Float] = [
+            0.0,    // Lower boundary (no elliptic effect)
+            0.1,    // Small modulus
+            0.3,    // Small to mid-range modulus
+            0.5,    // Mid-range modulus
+            0.7,    // Mid to high-range modulus
+            0.9    // High-range modulus
+        ]
+        
+        let wrappedTestAngles = AnyBufferData(testAngles)
+        let wrappedTestModuli = AnyBufferData(testModuli)
+        let inputs: [AnyBufferData] = [wrappedTestAngles, wrappedTestModuli]
+        
+        let count = testAngles.count
+        let resultBufferSize = count * MemoryLayout<EllintResult>.size
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "ellint_E_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: EllintResult.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults = readExpectedResults(filename: "expected_elliptice_results")
+
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            XCTAssertEqual(gpuResult.val, expectedResult.val, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.status, expectedResult.status, "Non SUCCESSful status code at index \(i)")
+        }
+    }
+    
+    func testEllintPInBounds() {
+        let testAngles: [Float] = [
+            0.0,            // Lower boundary
+            0.1,            // Small angle
+            0.5,            // Mid-range angle
+            1.0,            // Larger angle
+            1.5,            // Near upper boundary (π/2)
+            Float.pi / 4   // π/4 (45 degrees)
+        ]
+
+        let testModuli: [Float] = [
+            0.0,    // Lower boundary (no elliptic effect)
+            0.1,    // Small modulus
+            0.3,    // Small to mid-range modulus
+            0.5,    // Mid-range modulus
+            0.7,    // Mid to high-range modulus
+            0.9    // High-range modulus
+        ]
+        
+        let testN: [Float] = [
+            0.0,
+            0.5,
+            0.9,
+            0.0,
+            0.01,
+            -0.5
+        ]
+
+        let wrappedTestAngles = AnyBufferData(testAngles)
+        let wrappedTestModuli = AnyBufferData(testModuli)
+        let wrappedTestN = AnyBufferData(testN)
+        let inputs: [AnyBufferData] = [wrappedTestAngles, wrappedTestModuli, wrappedTestN]
+        
+        let count = testAngles.count
+        let resultBufferSize = count * MemoryLayout<EllintResult>.size
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "ellint_P_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: EllintResult.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults = readExpectedResults(filename: "expected_ellipticp_results")
+
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            XCTAssertEqual(gpuResult.val, expectedResult.val, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.status, expectedResult.status, "Non SUCCESSful status code at index \(i)")
+        }
+    }
+
     func testRadialRoots() {
         let M: [Float] = [1.0, 1.0, 1.0]
         let b: [Float] = [5.2, 5.31, 10.11]

@@ -58,9 +58,6 @@ float3 sampleYUVTexture(texture2d<float, access::sample> YTexture,
     return yuvToRgb(y, uv.x, uv.y);
 }
 
-// TODO: Make sure it does the math properly for either orientation
-// TODO: Ensure consistency of camel case and underscores
-// TODO: Add front facing camera logic -> don't need to do multiple ray traces, just need to
 fragment float4 fragmentShader(VertexOut in [[stage_in]],
                                texture2d<float, access::sample> frontYTexture [[texture(0)]],
                                texture2d<float, access::sample> frontUVTexture [[texture(1)]],
@@ -68,9 +65,9 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
                                texture2d<float, access::sample> backUVTexture [[texture(3)]],
                                constant Uniforms &uniforms [[buffer(0)]],
                                sampler s [[sampler(0)]]) {
-    // The focal length of the camera in pixels
-    // TODO: should be one for each camera!
-    // float focalLength = 3825.0;
+    // Estimate of the focal length in units of pixels.
+    // We assume that the front-facing and rear-facing
+    // cameras have the same focal length.
     float focalLength = 3825.0;
 
     // Some other parameters.
@@ -117,34 +114,32 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
     float varphitilde = lenseResult.varphitilde;
     bool ccw = lenseResult.ccw;
     
-    // Using the transformed incidence angle and focal length
-    // obtain the distance in pixels from the center.
-    float transformedDist = 0.0;
-    float2 transformedRelativePixelCoordinates = 0.0;
-    bool isFrontFacing = false;
-    if (fEqual(varphitilde, M_PI_F)) {
-        isFrontFacing = true;
-        return float4(0.0, 0.0, 0.0, 1.0);
-    } else if (fEqual(varphitilde, 0.0)) {
-        isFrontFacing = false;
-        transformedDist = 0.0;
-    } else if (M_PI_F / 2.0 < varphitilde) {
-        // If the rotation from the line of sight is greater
-        // than pi / 2 rad then the incidence corresponds to
-        // the front facing camera.
-        // TODO: implement this
-        isFrontFacing = true;
-        return float4(0.0, 1.0, 0.0, 1.0);
-    } else {
-        isFrontFacing = false;
-        transformedDist = focalLength * tan(varphitilde);
-        transformedRelativePixelCoordinates = (ccw ? -1.0 : 1.0) * float2(transformedDist * cos(psi),
-                                                                          transformedDist * sin(psi));
+    // Need to ensure that we don't call tan(pi / 2).
+    if (fEqual(varphitilde, M_PI_F / 2.0)) {
+        return float4(0.0, 0.0, 1.0, 1.0);
     }
     
+    // Using the transformed incidence angle and focal length
+    // obtain the distance in pixels from the center.
+    bool isFrontFacing = false;
+    if (M_PI_F / 2.0 < varphitilde) {
+        isFrontFacing = true;
+        varphitilde = M_PI_F - varphitilde;
+    }
+    float transformedDist = focalLength * tan(varphitilde);
+    float2 transformedRelativePixelCoords = (ccw ? -1.0 : 1.0) * float2(transformedDist * cos(psi),
+                                                                 transformedDist * sin(psi));
+    
+    // We also need the front-facing camera center now.
+    float2 frontFacingCenter = float2(uniforms.frontTextureWidth / 2.0, uniforms.frontTextureHeight / 2.0);
+
     // Invert back to texture coordinates
-    float2 transformedPixelCoords = transformedRelativePixelCoordinates + center;
-    float2 transformedTexCoord = transformedPixelCoords / float2(uniforms.backTextureWidth, uniforms.backTextureHeight);
+    float2 transformedCenter = isFrontFacing ? frontFacingCenter : center;
+    float2 imageDimensions = isFrontFacing ? float2(uniforms.frontTextureWidth, uniforms.frontTextureHeight)
+                                           : float2(uniforms.backTextureWidth, uniforms.backTextureHeight);
+    
+    float2 transformedPixelCoords = transformedRelativePixelCoords + transformedCenter;
+    float2 transformedTexCoord = transformedPixelCoords / imageDimensions;
     
     // Ensure that the texture coordinate is inbounds
     if (transformedTexCoord.x < 0.0 || 1.0 < transformedTexCoord.x ||
@@ -152,12 +147,8 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
         return float4(0.0, 0.0, 1.0, 1.0);
     }
     
-    float3 rgb = float3(0.0, 0.0, 0.0);
-    if (isFrontFacing) {
-        rgb = sampleYUVTexture(frontYTexture, frontUVTexture, transformedTexCoord);
-    } else {
-        rgb = sampleYUVTexture(backYTexture, backUVTexture, transformedTexCoord);
-    }
+    float3 rgb = isFrontFacing  ? sampleYUVTexture(frontYTexture, frontUVTexture, transformedTexCoord)
+                                : sampleYUVTexture(backYTexture, backUVTexture, transformedTexCoord);
     
     return float4(rgb, 1.0);
 }
@@ -172,9 +163,9 @@ fragment float4 dominicFragmentShader(VertexOut in [[stage_in]],
     // We let rs and ro be large in this set up.
     // This will allow for the usage of an approximation to the
     // elliptic integrals during lensing.
-    float M = 1;
+    float M = 1.0;
     float rs = 1000.0;
-    float ro = 1000.0;
+    float ro = rs;
     
     // Calculate the pixel coordinates of the current fragment
     float2 pixelCoords = in.texCoord * float2(uniforms.backTextureWidth, uniforms.backTextureHeight);
@@ -203,13 +194,9 @@ fragment float4 dominicFragmentShader(VertexOut in [[stage_in]],
     float varphitilde = lenseResult.varphitilde;
     bool ccw = lenseResult.ccw;
 
-    // Front-facing camera
-    // TODO: implement (use a symmetric setup)
-    if (M_PI_F / 2.0 < varphitilde) {
-        return float4(0.0, 1.0, 0.0, 1.0);
-    }
-    
-    // Unwind through the inverse transformation to texture coordinates
+    // Unwind through the inverse transformation to texture coordinates.
+    // Note that because ro = rs, we don't need to worry about the front-facing
+    // camera.
     float btilde = ro * sin(varphitilde);
     float2 transformedImagePlaneCoords = (ccw ? -1.0 : 1.0) * float2(btilde * cos(psi), btilde * sin(psi));
     float2 transformedRelativePixelCoords = transformedImagePlaneCoords / lengthPerPixel;

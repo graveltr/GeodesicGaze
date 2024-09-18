@@ -18,6 +18,12 @@
 		698609402C74DBB200CD3B0F /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6986093B2C74DBB200CD3B0F /* Shaders.metal */; };
 		698609412C74DBB200CD3B0F /* MultiCamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6986093C2C74DBB200CD3B0F /* MultiCamView.swift */; };
 		698609422C74DBB200CD3B0F /* MathFunctions.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6986093D2C74DBB200CD3B0F /* MathFunctions.metal */; };
+		698F801E2C9B25A8001301C1 /* expected_ellipticf_results.txt in Resources */ = {isa = PBXBuildFile; fileRef = 698F801C2C9B25A8001301C1 /* expected_ellipticf_results.txt */; };
+		698F801F2C9B25A8001301C1 /* expected_ellipticf_results.txt in Resources */ = {isa = PBXBuildFile; fileRef = 698F801C2C9B25A8001301C1 /* expected_ellipticf_results.txt */; };
+		698F80202C9B25A8001301C1 /* expected_elliptice_results.txt in Resources */ = {isa = PBXBuildFile; fileRef = 698F801D2C9B25A8001301C1 /* expected_elliptice_results.txt */; };
+		698F80212C9B25A8001301C1 /* expected_elliptice_results.txt in Resources */ = {isa = PBXBuildFile; fileRef = 698F801D2C9B25A8001301C1 /* expected_elliptice_results.txt */; };
+		698F80232C9B28EC001301C1 /* expected_ellipticp_results.txt in Resources */ = {isa = PBXBuildFile; fileRef = 698F80222C9B28EC001301C1 /* expected_ellipticp_results.txt */; };
+		698F80242C9B28EC001301C1 /* expected_ellipticp_results.txt in Resources */ = {isa = PBXBuildFile; fileRef = 698F80222C9B28EC001301C1 /* expected_ellipticp_results.txt */; };
 		69BF16822C74DE100008D537 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 69BF16812C74DE100008D537 /* README.md */; };
 		69F7B4432C85419B00057475 /* GeodesicGazeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F7B4422C85419B00057475 /* GeodesicGazeTests.swift */; };
 		69F7B44A2C8547B600057475 /* ComputeKernels.metal in Sources */ = {isa = PBXBuildFile; fileRef = 69F7B4492C8547B600057475 /* ComputeKernels.metal */; };
@@ -50,6 +56,9 @@
 		6986093B2C74DBB200CD3B0F /* Shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		6986093C2C74DBB200CD3B0F /* MultiCamView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiCamView.swift; sourceTree = "<group>"; };
 		6986093D2C74DBB200CD3B0F /* MathFunctions.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = MathFunctions.metal; sourceTree = "<group>"; };
+		698F801C2C9B25A8001301C1 /* expected_ellipticf_results.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = expected_ellipticf_results.txt; sourceTree = "<group>"; };
+		698F801D2C9B25A8001301C1 /* expected_elliptice_results.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = expected_elliptice_results.txt; sourceTree = "<group>"; };
+		698F80222C9B28EC001301C1 /* expected_ellipticp_results.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = expected_ellipticp_results.txt; sourceTree = "<group>"; };
 		69BF16812C74DE100008D537 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		69F7B4402C85419B00057475 /* GeodesicGazeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GeodesicGazeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		69F7B4422C85419B00057475 /* GeodesicGazeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeodesicGazeTests.swift; sourceTree = "<group>"; };
@@ -98,6 +107,9 @@
 		6986092A2C74DB2800CD3B0F /* GeodesicGaze */ = {
 			isa = PBXGroup;
 			children = (
+				698F80222C9B28EC001301C1 /* expected_ellipticp_results.txt */,
+				698F801D2C9B25A8001301C1 /* expected_elliptice_results.txt */,
+				698F801C2C9B25A8001301C1 /* expected_ellipticf_results.txt */,
 				69F7B44B2C85576000057475 /* expected_results.txt */,
 				6986093D2C74DBB200CD3B0F /* MathFunctions.metal */,
 				69F7B44E2C855ADC00057475 /* MathFunctions.h */,
@@ -217,8 +229,11 @@
 			files = (
 				69BF16822C74DE100008D537 /* README.md in Resources */,
 				69F7B44C2C85576000057475 /* expected_results.txt in Resources */,
+				698F801E2C9B25A8001301C1 /* expected_ellipticf_results.txt in Resources */,
 				698609332C74DB2A00CD3B0F /* Preview Assets.xcassets in Resources */,
 				698609302C74DB2A00CD3B0F /* Assets.xcassets in Resources */,
+				698F80232C9B28EC001301C1 /* expected_ellipticp_results.txt in Resources */,
+				698F80202C9B25A8001301C1 /* expected_elliptice_results.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -226,7 +241,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				698F80242C9B28EC001301C1 /* expected_ellipticp_results.txt in Resources */,
+				698F801F2C9B25A8001301C1 /* expected_ellipticf_results.txt in Resources */,
 				69F7B44D2C85576000057475 /* expected_results.txt in Resources */,
+				698F80212C9B25A8001301C1 /* expected_elliptice_results.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

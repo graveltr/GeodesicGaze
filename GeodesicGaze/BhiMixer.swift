@@ -39,7 +39,7 @@ class BhiMixer {
     private func setupPipeline() {
         let library = device.makeDefaultLibrary()
         let vertexFunction = library?.makeFunction(name: "vertexShader")
-        let fragmentFunction = library?.makeFunction(name: "dominicFragmentShader")
+        let fragmentFunction = library?.makeFunction(name: "fragmentShader")
         
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.vertexFunction = vertexFunction
