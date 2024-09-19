@@ -8,6 +8,7 @@
 #include <metal_stdlib>
 #include "MathFunctions.h"
 #include "Physics.h"
+#include "ComplexMath.h"
 
 using namespace metal;
 
@@ -99,4 +100,20 @@ kernel void compute_abc_compute_kernel(const device float *a                  [[
                                              device float3 *results                 [[buffer(4)]],
                                              uint id [[thread_position_in_grid]]) {
     results[id] = computeABC(a[id], M[id], eta[id], lambda[id]);
+}
+
+kernel void compute_pq_compute_kernel(const device float *a                  [[buffer(0)]],
+                                             const device float *M                  [[buffer(1)]],
+                                             const device float *eta                [[buffer(2)]],
+                                             const device float *lambda             [[buffer(3)]],
+                                             device float2 *results                 [[buffer(4)]],
+                                             uint id [[thread_position_in_grid]]) {
+    results[id] = computePQ(a[id], M[id], eta[id], lambda[id]);
+}
+
+kernel void pow1over3_compute_kernel(const device float *zx [[buffer(0)]],
+                                     const device float *zy [[buffer(1)]],
+                                     device float2 *results [[buffer(2)]],
+                                     uint id [[thread_position_in_grid]]) {
+    results[id] = pow1over3(float2(zx[id], zy[id]));
 }

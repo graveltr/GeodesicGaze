@@ -63,6 +63,7 @@
 		698F80222C9B28EC001301C1 /* expected_ellipticp_results.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = expected_ellipticp_results.txt; sourceTree = "<group>"; };
 		698F80282C9B75B8001301C1 /* ComplexMath.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ComplexMath.metal; sourceTree = "<group>"; };
 		69BF16812C74DE100008D537 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		69F078EC2C9C633D000D7DE7 /* ComplexMath.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ComplexMath.h; sourceTree = "<group>"; };
 		69F7B4402C85419B00057475 /* GeodesicGazeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GeodesicGazeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		69F7B4422C85419B00057475 /* GeodesicGazeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeodesicGazeTests.swift; sourceTree = "<group>"; };
 		69F7B4492C8547B600057475 /* ComputeKernels.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = ComputeKernels.metal; sourceTree = "<group>"; };
@@ -115,8 +116,9 @@
 				698F801C2C9B25A8001301C1 /* expected_ellipticf_results.txt */,
 				69F7B44B2C85576000057475 /* expected_results.txt */,
 				6986093D2C74DBB200CD3B0F /* MathFunctions.metal */,
-				698F80282C9B75B8001301C1 /* ComplexMath.metal */,
 				69F7B44E2C855ADC00057475 /* MathFunctions.h */,
+				698F80282C9B75B8001301C1 /* ComplexMath.metal */,
+				69F078EC2C9C633D000D7DE7 /* ComplexMath.h */,
 				6967E4732C862EC700E5C57D /* Physics.metal */,
 				6967E4722C862EB300E5C57D /* Physics.h */,
 				6967E46F2C861FF800E5C57D /* Utilities.metal */,

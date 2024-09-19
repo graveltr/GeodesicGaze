@@ -417,10 +417,10 @@ final class GeodesicGazeTests: XCTestCase {
     
     
     func testKerrRadialRoots() {
-        let a: [Float] = [0.8]
-        let M: [Float] = [1.0]
-        let eta: [Float] = [5.0]
-        let lambda: [Float] = [-4.0]
+        let a: [Float] = [0.8, 0.8, 0.2]
+        let M: [Float] = [1.0, 1.0, 1.0]
+        let eta: [Float] = [5.0, 40, 11.2]
+        let lambda: [Float] = [-4.0, -4, -3.3]
         
         let wrappeda = AnyBufferData(a)
         let wrappedM = AnyBufferData(M)
@@ -442,6 +442,16 @@ final class GeodesicGazeTests: XCTestCase {
                                   r2: simd_float2(x: 0.0582949, y: 0),
                                   r3: simd_float2(x: 2.73681 , y: -1.55977),
                                   r4: simd_float2(x: 2.73681 , y: 1.55977),
+                                  status: 0),
+            KerrRadialRootsResult(r1: simd_float2(x: -8.40923, y: 0),
+                                  r2: simd_float2(x: 0.225317, y: 0),
+                                  r3: simd_float2(x: 2.2939, y: 0),
+                                  r4: simd_float2(x: 5.89001, y: 0),
+                                  status: 0),
+            KerrRadialRootsResult(r1: simd_float2(x: -5.5272, y: 0),
+                                  r2: simd_float2(x: 0.00959553, y: 0),
+                                  r3: simd_float2(x: 2.7588, y: -0.914346),
+                                  r4: simd_float2(x: 2.7588, y: 0.914346),
                                   status: 0)
         ]
 
@@ -460,11 +470,38 @@ final class GeodesicGazeTests: XCTestCase {
         }
     }
     
-    func testComputeABC() {
-        let a: [Float] = [0.8, 0.8, 0.8]
+    func testComputePQ() {
+        let a: [Float] = [0.8, 0.8, 0.2]
         let M: [Float] = [1.0, 1.0, 1.0]
-        let eta: [Float] = [5.0, 5.0, 5.0]
-        let lambda: [Float] = [-4.0, -4.0, -4.0]
+        let eta: [Float] = [5.0, 40, 11.2]
+        let lambda: [Float] = [-4.0, -4, -3.3]
+        
+        let wrappeda = AnyBufferData(a)
+        let wrappedM = AnyBufferData(M)
+        let wrappedEta = AnyBufferData(eta)
+        let wrappedLambda = AnyBufferData(lambda)
+        let inputs: [AnyBufferData] = [wrappeda, wrappedM, wrappedEta, wrappedLambda]
+        
+        let count = M.count
+        let resultBufferSize = count * MemoryLayout<simd_float2>.size;
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "compute_pq_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: simd_float2.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            print("P,Q: \(gpuResult)")
+        }
+    }
+
+    func testComputeABC() {
+        let a: [Float] = [0.8, 0.8, 0.2]
+        let M: [Float] = [1.0, 1.0, 1.0]
+        let eta: [Float] = [5.0, 40, 11.2]
+        let lambda: [Float] = [-4.0, -4, -3.3]
         
         let wrappeda = AnyBufferData(a)
         let wrappedM = AnyBufferData(M)
@@ -484,6 +521,40 @@ final class GeodesicGazeTests: XCTestCase {
         for i in 0..<gpuResults.count {
             let gpuResult = gpuResults[i]
             print("A,B,C: \(gpuResult)")
+        }
+    }
+    
+    func testPow1over3() {
+        let zx: [Float] = [1.0, 0.0, 3.345]
+        let zy: [Float] = [0.0, 1.0, -1.2245]
+
+        let wrappedzx = AnyBufferData(zx)
+        let wrappedzy = AnyBufferData(zy)
+        let inputs: [AnyBufferData] = [wrappedzx, wrappedzy]
+        
+        let count = zx.count
+        let resultBufferSize = count * MemoryLayout<simd_float2>.size;
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "pow1over3_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: simd_float2.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults = [
+            simd_float2(x: 1.0,         y: 0.0),
+            simd_float2(x: 0.866025,    y: 0.5),
+            simd_float2(x: 1.51678,     y: -0.178236)
+        ]
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            print("gpu result: \(gpuResult)")
+            print("expected result: \(expectedResult)")
+            
+            XCTAssertEqual(gpuResult.x, expectedResult.x, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.y, expectedResult.y, accuracy: 1e-3, "Value mismatch at index \(i)")
         }
     }
 }

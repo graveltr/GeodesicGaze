@@ -29,6 +29,7 @@ struct KerrRadialRootsResult {
 
 float4 radialRoots(float M, float b);
 float3 computeABC(float a, float M, float eta, float lambda);
+float2 computePQ(float a, float M, float eta, float lambda);
 KerrRadialRootsResult kerrRadialRoots(float a, float M, float eta, float lambda);
 
 PhiSResult phiS(float M, float ro, float rs, float b);
