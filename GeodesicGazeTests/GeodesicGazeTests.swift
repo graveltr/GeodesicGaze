@@ -22,6 +22,14 @@ struct SchwarzschildLenseResult {
     var status: Int32
 }
 
+struct KerrRadialRootsResult {
+    var r1: simd_float2
+    var r2: simd_float2
+    var r3: simd_float2
+    var r4: simd_float2
+    var status: Int32
+}
+
 struct PhiSResult {
     var val: Float
     var status: Int32
@@ -405,5 +413,77 @@ final class GeodesicGazeTests: XCTestCase {
         computeEncoder.endEncoding()
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()
+    }
+    
+    
+    func testKerrRadialRoots() {
+        let a: [Float] = [0.8]
+        let M: [Float] = [1.0]
+        let eta: [Float] = [5.0]
+        let lambda: [Float] = [-4.0]
+        
+        let wrappeda = AnyBufferData(a)
+        let wrappedM = AnyBufferData(M)
+        let wrappedEta = AnyBufferData(eta)
+        let wrappedLambda = AnyBufferData(lambda)
+        let inputs: [AnyBufferData] = [wrappeda, wrappedM, wrappedEta, wrappedLambda]
+        
+        let count = M.count
+        let resultBufferSize = count * MemoryLayout<KerrRadialRootsResult>.size;
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "kerr_radial_roots_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: KerrRadialRootsResult.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults = [
+            KerrRadialRootsResult(r1: simd_float2(x: -5.53192, y: 0),
+                                  r2: simd_float2(x: 0.0582949, y: 0),
+                                  r3: simd_float2(x: 2.73681 , y: -1.55977),
+                                  r4: simd_float2(x: 2.73681 , y: 1.55977),
+                                  status: 0)
+        ]
+
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            print("root: \(gpuResult)")
+            XCTAssertEqual(gpuResult.r1.x, expectedResult.r1.x, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.r1.y, expectedResult.r1.y, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.r2.x, expectedResult.r2.x, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.r2.y, expectedResult.r2.y, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.r3.x, expectedResult.r3.x, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.r3.y, expectedResult.r3.y, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.r4.x, expectedResult.r4.x, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.r4.y, expectedResult.r4.y, accuracy: 1e-3, "Value mismatch at index \(i)")
+        }
+    }
+    
+    func testComputeABC() {
+        let a: [Float] = [0.8, 0.8, 0.8]
+        let M: [Float] = [1.0, 1.0, 1.0]
+        let eta: [Float] = [5.0, 5.0, 5.0]
+        let lambda: [Float] = [-4.0, -4.0, -4.0]
+        
+        let wrappeda = AnyBufferData(a)
+        let wrappedM = AnyBufferData(M)
+        let wrappedEta = AnyBufferData(eta)
+        let wrappedLambda = AnyBufferData(lambda)
+        let inputs: [AnyBufferData] = [wrappeda, wrappedM, wrappedEta, wrappedLambda]
+        
+        let count = M.count
+        let resultBufferSize = count * MemoryLayout<simd_float3>.size;
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "compute_abc_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: simd_float3.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            print("A,B,C: \(gpuResult)")
+        }
     }
 }

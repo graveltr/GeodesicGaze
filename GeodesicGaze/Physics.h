@@ -9,6 +9,7 @@
 #define Physics_h
 
 #define EMITTED_FROM_BLACK_HOLE 3
+#define IMAGINARY_VALUE_ENCOUNTERED 4
 
 struct SchwarzschildLenseResult {
     float varphitilde;
@@ -21,7 +22,14 @@ struct PhiSResult {
     int status;
 };
 
+struct KerrRadialRootsResult {
+    float2 roots[4];
+    int status;
+};
+
 float4 radialRoots(float M, float b);
+float3 computeABC(float a, float M, float eta, float lambda);
+KerrRadialRootsResult kerrRadialRoots(float a, float M, float eta, float lambda);
 
 PhiSResult phiS(float M, float ro, float rs, float b);
 

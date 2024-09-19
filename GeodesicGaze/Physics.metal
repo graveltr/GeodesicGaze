@@ -30,6 +30,70 @@ float4 radialRoots(float M, float b) {
     return float4(r1, r2, r3, r4);
 }
 
+float3 computeABC(float a, float M, float eta, float lambda) {
+    float A = a * a - eta - lambda * lambda;
+    float B = 2.0 * M * (eta + (lambda - a) * (lambda - a));
+    float C = -1.0 * a * a * eta;
+    
+    return float3(A,B,C);
+}
+
+KerrRadialRootsResult kerrRadialRoots(float a, float M, float eta, float lambda) {
+    KerrRadialRootsResult result;
+    
+    float A = a * a - eta - lambda * lambda;
+    float B = 2.0 * M * (eta + (lambda - a) * (lambda - a));
+    float C = -1.0 * a * a * eta;
+    
+    float P = -1.0 * (A * A / 12.0) - C;
+    float Q = -1.0 * (A / 3.0) * ((A / 6.0) * (A / 6.0) - C) - B * B / 8.0;
+    
+    float termUnderRadical = pow(P / 3.0, 3.0) + pow(Q / 2.0, 2.0);
+    if (termUnderRadical < 0.0) {
+        result.status = IMAGINARY_VALUE_ENCOUNTERED;
+        return result;
+    }
+    
+    float term = sqrt(termUnderRadical);
+    
+    float omegaplus = pow((-1.0 * Q / 2.0) + term, 1.0 / 3.0);
+    float omegaminus = pow((-1.0 * Q / 2.0) - term, 1.0 / 3.0);
+    
+    float xi0 = omegaplus + omegaminus - A / 3.0;
+    
+    assert(xi0 > 0);
+    
+    float z = sqrt(xi0 / 2.0);
+    
+    float2 r1, r2;
+    termUnderRadical = (-1.0 * A / 2.0) - z * z + (B / (4.0 * z));
+    if (termUnderRadical < 0.0) {
+        r1 = -1.0 * z * float2(1, 0) - float2(0, 1) * sqrt(-1.0 * termUnderRadical);
+        r2 = -1.0 * z * float2(1, 0) + float2(0, 1) * sqrt(-1.0 * termUnderRadical);
+    } else {
+        r1 = -1.0 * z * float2(1, 0) - float2(1, 0) * sqrt(termUnderRadical);
+        r2 = -1.0 * z * float2(1, 0) + float2(1, 0) * sqrt(termUnderRadical);
+    }
+    
+    float2 r3, r4;
+    termUnderRadical = (-1.0 * A / 2.0) - z * z - (B / (4.0 * z));
+    if (termUnderRadical < 0.0) {
+        r3 = z * float2(1, 0) - float2(0, 1) * sqrt(-1.0 * termUnderRadical);
+        r4 = z * float2(1, 0) + float2(0, 1) * sqrt(-1.0 * termUnderRadical);
+    } else {
+        r3 = z * float2(1, 0) - float2(1, 0) * sqrt(termUnderRadical);
+        r4 = z * float2(1, 0) + float2(1, 0) * sqrt(termUnderRadical);
+    }
+
+    result.status = SUCCESS;
+    result.roots[0] = r1;
+    result.roots[1] = r2;
+    result.roots[2] = r3;
+    result.roots[3] = r4;
+    
+    return result;
+}
+
 EllintResult mathcalF(float M, float r, float b, float modulus) {
     assert(0 <= modulus);
     
