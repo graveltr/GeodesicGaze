@@ -12,6 +12,26 @@
 
 using namespace metal;
 
+struct F2ofrResult {
+    float val;
+    float status;
+};
+
+struct IrResult {
+    float val;
+    float status;
+};
+
+struct MathcalGthetaResult {
+    float val;
+    float status;
+};
+
+struct CosThetaObserverResult {
+    float val;
+    float status;
+};
+
 // The roots of the radial potential.
 // ASSUMPTION: We assume that the caller
 // ensures bc < b => bc / b < 1 such that
@@ -234,5 +254,150 @@ SchwarzschildLenseResult schwarzschildLense(float M, float ro, float rs, float b
     
     result.varphitilde = diff1 < diff2 ? BCA1 : BCA2;
     result.status = SUCCESS;
+    return result;
+}
+
+F2ofrResult F2ofr(float r, float r1, float r2, float r3, float r4) {
+    F2ofrResult result;
+    
+    float x2 = sqrt(((r - r4) / (r - r3)) * ((r3 - r1) / (r4 - r1)));
+    float prefactor = 2.0 / ((r3 - r1) * (r4 - r2));
+    float phi = asin(x2);
+    float k = ((r3 - r2) * (r4 - r1)) / ((r3 - r1) * (r4 - r2));
+    
+    EllintResult ellintResult = ellint_F_mma(phi, k, 1e-5, 1e-5);
+    
+    result.status = ellintResult.status;
+    result.val = prefactor * ellintResult.val;
+    return result;
+}
+
+// NOTE: We differ from 1910.12881 in notations ro <--> rs, since we think
+// of the camera as the "observer." However, in that reference the "observer"
+// is the endpoint of the result of evolving the geodesic, which in the framing
+// here is the "source."
+IrResult computeIr(float a, float M, float ro, float rs, float r1, float r2, float r3, float r4) {
+    IrResult result;
+    
+    F2ofrResult F2ofroResult = F2ofr(ro, r1, r2, r3, r4);
+    F2ofrResult F2ofrsResult = F2ofr(rs, r1, r2, r3, r4);
+    if (F2ofroResult.status != SUCCESS || F2ofrsResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    
+    float F2ofro = F2ofroResult.val;
+    float F2ofrs = F2ofrsResult.val;
+    
+    // TODO: verify this minus sign
+    result.val = -1.0 * (F2ofro + F2ofrs);
+    result.status = SUCCESS;
+    return result;
+}
+
+MathcalGthetaResult mathcalGtheta(float a, float theta, float uplus, float uminus) {
+    MathcalGthetaResult result;
+    
+    float prefactor = -1.0 / sqrt(-1.0 * uminus * a * a);
+    float phi = asin(cos(theta) / sqrt(uplus));
+    float k = uplus / uminus;
+    
+    EllintResult ellintResult = ellint_F_mma(phi, k, 1e-5, 1e-5);
+    if (ellintResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float ellint_F = ellintResult.val;
+    
+    result.val = prefactor * ellint_F;
+    result.status = SUCCESS;
+    return result;
+}
+
+// We assume non-vortical values of eta and lambda have been passed.
+CosThetaObserverResult cosThetaObserver(float nuthetas, float tau, float a, float M, float thetas, float eta, float lambda) {
+    CosThetaObserverResult result;
+    
+    float deltaTheta = (1.0 / 2.0) * (1.0 - (eta + lambda * lambda) / (a * a));
+    
+    float uplus = deltaTheta + sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+    float uminus = deltaTheta - sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+    
+    MathcalGthetaResult mathcalGthetaResult = mathcalGtheta(a, thetas, uplus, uminus);
+    if (mathcalGthetaResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float mathcalGthetas = mathcalGthetaResult.val;
+    
+    float u = sqrt(-1.0 * uminus * a * a) * (tau + nuthetas * mathcalGthetas);
+    float m = uplus / uminus;
+
+    ElljacResult ellipjResult = ellipj(u, m);
+    if (ellipjResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    
+    result.val = -1.0 * nuthetas * sqrt(uplus) * ellipjResult.sn;
+    result.status = SUCCESS;
+    return result;
+}
+
+/*
+* NOTE - the interface for this function is different from
+* schwarzschildLense(). Here, we pass values of eta, lambda
+* and obtain the resulting values of (r_s, theta_s, phi_s).
+* One still needs to obtain the corresponding eta, lambda
+* for the flat space geodesic.
+*
+* TODO: make sure to ensure non-vortical geodesics.
+*/
+KerrLenseResult kerrLense(float a, float M, float ro, float rs, float eta, float lambda) {
+    KerrLenseResult result;
+    
+    KerrRadialRootsResult rootsResult = kerrRadialRoots(a, M, eta, lambda);
+    if (rootsResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float2 roots[4];
+    roots[0] = rootsResult.roots[0];
+    roots[1] = rootsResult.roots[1];
+    roots[2] = rootsResult.roots[2];
+    roots[3] = rootsResult.roots[3];
+    
+    // If not in case (2), then black hole emission.
+    if (!(isReal(roots[0]) &&
+          isReal(roots[1]) &&
+          isReal(roots[2]) &&
+          isReal(roots[3]))) {
+        result.status = EMITTED_FROM_BLACK_HOLE;
+        return result;
+    }
+    
+    float r1 = roots[0].x;
+    float r2 = roots[1].x;
+    float r3 = roots[2].x;
+    float r4 = roots[3].x;
+
+    // Ensure we are in the subcase of (2) in which
+    // a turning point sits outside the horizon.
+    float rplus = M + sqrt(M * M - a * a);
+    if (r4 < rplus) {
+        result.status = EMITTED_FROM_BLACK_HOLE;
+        return result;
+    }
+    
+    IrResult IrResult = computeIr(a, M, ro, rs, r1, r2, r3, r4);
+    if (IrResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float Ir = IrResult.val;
+    float tau = Ir;
+    
+    
+
     return result;
 }

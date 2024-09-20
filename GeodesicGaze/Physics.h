@@ -17,6 +17,12 @@ struct SchwarzschildLenseResult {
     int status;
 };
 
+struct KerrLenseResult {
+    float thetas;
+    float phis;
+    int status;
+};
+
 struct PhiSResult {
     float val;
     int status;

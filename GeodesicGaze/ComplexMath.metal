@@ -7,6 +7,11 @@
 
 #include <metal_stdlib>
 using namespace metal;
+#include "MathFunctions.h"
+
+bool isReal(float2 z) {
+    return fEqual(z.y, 0);
+}
 
 float2 zWithMaxRealPart(float2 z1, float2 z2, float2 z3) {
     float2 max = z1;

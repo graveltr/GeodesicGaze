@@ -70,6 +70,8 @@ float2 complex_pow(float2 z, float alpha) {
     return polar_to_cartesian(pow(polarCoords.x, alpha), alpha * polarCoords.y);
 }
 
+
+
 // A straightforward port of the GNU Scientific
 // Library's implementation of Jacobi elliptic functions.
 // Returns in order: sn, cn, dn, return code.
@@ -585,6 +587,22 @@ EllintResult ellint_P(float phi, float k, float n, float errtol, float prec) {
         result.status = ERROR_SELECT_3(status, rj.status, rp.status);
         return result;
     }
+}
+
+/*
+ * The GSL's implementation differs in convention from that of Mathematica.
+ * Here we provide interfaces to Mathematica's conventions.
+ */
+EllintResult ellint_F_mma(float phi, float k, float errtol, float prec) {
+    return ellint_F(phi, sqrt(k), errtol, prec);
+}
+
+EllintResult ellint_E_mma(float phi, float k, float errtol, float prec) {
+    return ellint_E(phi, sqrt(k), errtol, prec);
+}
+
+EllintResult ellint_P_mma(float phi, float k, float n, float errtol, float prec) {
+    return ellint_P(phi, sqrt(k), -1.0 * n, errtol, prec);
 }
 
 float normalizeAngle(float phi) {

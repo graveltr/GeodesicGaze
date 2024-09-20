@@ -212,3 +212,15 @@ fragment float4 dominicFragmentShader(VertexOut in [[stage_in]],
     float3 rgb = sampleYUVTexture(backYTexture, backUVTexture, transformedTexCoord);
     return float4(rgb, 1.0);
 }
+
+fragment float4 kerrFragmentShader(VertexOut in [[stage_in]],
+                                   texture2d<float, access::sample> frontYTexture [[texture(0)]],
+                                   texture2d<float, access::sample> frontUVTexture [[texture(1)]],
+                                   texture2d<float, access::sample> backYTexture [[texture(2)]],
+                                   texture2d<float, access::sample> backUVTexture [[texture(3)]],
+                                   constant Uniforms &uniforms [[buffer(0)]],
+                                   sampler s [[sampler(0)]]) {
+    
+    
+    return float4(0.0, 0.0, 0.0, 0.0)
+}
