@@ -10,7 +10,14 @@
 #include "MathFunctions.h"
 #include "ComplexMath.h"
 
+// TODO: switch to just using Result struct.
+
 using namespace metal;
+
+struct Result {
+    float val;
+    float status;
+};
 
 struct F2ofrResult {
     float val;
@@ -22,7 +29,12 @@ struct IrResult {
     float status;
 };
 
-struct MathcalGthetaResult {
+struct IphiResult {
+    float val;
+    float status;
+};
+
+struct MathcalGResult {
     float val;
     float status;
 };
@@ -295,8 +307,8 @@ IrResult computeIr(float a, float M, float ro, float rs, float r1, float r2, flo
     return result;
 }
 
-MathcalGthetaResult mathcalGtheta(float a, float theta, float uplus, float uminus) {
-    MathcalGthetaResult result;
+MathcalGResult mathcalGtheta(float a, float theta, float uplus, float uminus) {
+    MathcalGResult result;
     
     float prefactor = -1.0 / sqrt(-1.0 * uminus * a * a);
     float phi = asin(cos(theta) / sqrt(uplus));
@@ -314,6 +326,27 @@ MathcalGthetaResult mathcalGtheta(float a, float theta, float uplus, float uminu
     return result;
 }
 
+Result mathcalGphi(float a, float theta, float uplus, float uminus) {
+    Result result;
+    
+    float prefactor = -1.0 / sqrt(-1.0 * uminus * a * a);
+    
+    float n = uplus;
+    float phi = asin(cos(theta) / sqrt(uplus));
+    float k = uplus / uminus;
+    
+    EllintResult ellintResult = ellint_P_mma(phi, k, n, 1e-5, 1e-5);
+    if (ellintResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float ellint_P = ellintResult.val;
+    
+    result.val = prefactor * ellint_P;
+    result.status = SUCCESS;
+    return result;
+}
+
 // We assume non-vortical values of eta and lambda have been passed.
 CosThetaObserverResult cosThetaObserver(float nuthetas, float tau, float a, float M, float thetas, float eta, float lambda) {
     CosThetaObserverResult result;
@@ -323,7 +356,7 @@ CosThetaObserverResult cosThetaObserver(float nuthetas, float tau, float a, floa
     float uplus = deltaTheta + sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
     float uminus = deltaTheta - sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
     
-    MathcalGthetaResult mathcalGthetaResult = mathcalGtheta(a, thetas, uplus, uminus);
+    MathcalGResult mathcalGthetaResult = mathcalGtheta(a, thetas, uplus, uminus);
     if (mathcalGthetaResult.status != SUCCESS) {
         result.status = FAILURE;
         return result;
@@ -344,6 +377,179 @@ CosThetaObserverResult cosThetaObserver(float nuthetas, float tau, float a, floa
     return result;
 }
 
+Result Psitau(float a, float uplus, float uminus, float tau, float thetas, float nuthetas) {
+    Result result;
+    
+    MathcalGResult mathcalGthetasResult = mathcalGtheta(a, thetas, uplus, uminus);
+    if (mathcalGthetasResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float mathcalGthetas = mathcalGthetasResult.val;
+    
+    float u = sqrt(-1.0 * uminus * a * a) * (tau + nuthetas * mathcalGthetas);
+    float m = uplus / uminus;
+    
+    EllamResult amResult = jacobiam(u, m);
+    if (amResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    
+    result.val = amResult.am;
+    result.status = SUCCESS;
+    return result;
+}
+
+Result computeGphi(float nuthetas, float tau, float a, float M, float thetas, float eta, float lambda) {
+    Result result;
+    
+    float deltaTheta = (1.0 / 2.0) * (1.0 - (eta + lambda * lambda) / (a * a));
+    
+    float uplus = deltaTheta + sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+    float uminus = deltaTheta - sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+    
+    Result mathcalGphiResult = mathcalGphi(a, thetas, uplus, uminus);
+    if (mathcalGphiResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float mathcalGphis = mathcalGphiResult.val;
+    
+    Result psiTauResult = Psitau(a, uplus, uminus, tau, thetas, nuthetas);
+    if (psiTauResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float psiTau = psiTauResult.val;
+    
+    EllintResult ellipticPResult = ellint_P_mma(psiTau, uplus / uminus, uplus, 1e-5, 1e-5);
+    if (ellipticPResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+
+    result.val = (1.0 / sqrt(-1.0 * uminus * a * a)) * ellipticPResult.val - nuthetas * mathcalGphis;
+    result.status = SUCCESS;
+    return result;
+}
+
+Result computePi2ofr(float r, float rplus, float rminus, float r1, float r2, float r3, float r4, float ro, float rs, bool isPlus) {
+    Result result;
+    
+    float prefactor1 = 2.0 / sqrt((r3 - r1) * (r4 - r2));
+    float prefactor2;
+    if (isPlus) {
+        prefactor2 = (r4 - r3) / ((rplus - r3) * (rplus - r4));
+    } else {
+        prefactor2 = (r4 - r3) / ((rminus - r3) * (rminus - r4));
+    }
+    
+    float n;
+    if (isPlus) {
+        n = ((rplus - r3) * (r4 - r1)) / ((rplus - r4) * (r3 - r1));
+    } else {
+        n = ((rminus - r3) * (r4 - r1)) / ((rminus - r4) * (r3 - r1));
+    }
+    float x2 = sqrt(((r - r4) / (r - r3)) * ((r3 - r1) / (r4 - r1)));
+    float k = ((r3 - r2) * (r4 - r1)) / ((r3 - r1) * (r4 - r2));
+    
+    EllintResult ellipticPResult = ellint_P_mma(asin(x2), k, n, 1e-5, 1e-5);
+    if (ellipticPResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    
+    result.val = prefactor1 * prefactor2 * ellipticPResult.val;
+    result.status = SUCCESS;
+    return result;
+}
+
+Result computeIminus(float rplus, float rminus, float r1, float r2, float r3, float r4, float ro, float rs) {
+    Result result;
+    
+    Result Pi2ofroResult = computePi2ofr(ro, rplus, rminus, r1, r2, r3, r4, ro, rs, false);
+    Result Pi2ofrsResult = computePi2ofr(rs, rplus, rminus, r1, r2, r3, r4, ro, rs, false);
+    if (Pi2ofroResult.status != SUCCESS || Pi2ofrsResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float Pi2ofro = Pi2ofroResult.val;
+    float Pi2ofrs = Pi2ofrsResult.val;
+    
+    F2ofrResult F2ofroResult = F2ofr(ro, r1, r2, r3, r4);
+    F2ofrResult F2ofrsResult = F2ofr(rs, r1, r2, r3, r4);
+    if (F2ofroResult.status != SUCCESS || F2ofrsResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float F2ofro = F2ofroResult.val;
+    float F2ofrs = F2ofrsResult.val;
+
+    float mathcalIplusatro = -1.0 * Pi2ofro - F2ofro / (rminus - r3);
+    float mathcalIplusatrs = -1.0 * Pi2ofrs - F2ofrs / (rminus - r3);
+    
+    result.val = -1.0 * (mathcalIplusatro + mathcalIplusatrs);
+    result.status = SUCCESS;
+    return result;
+}
+
+Result computeIplus(float rplus, float rminus, float r1, float r2, float r3, float r4, float ro, float rs) {
+    Result result;
+    
+    Result Pi2ofroResult = computePi2ofr(ro, rplus, rminus, r1, r2, r3, r4, ro, rs, true);
+    Result Pi2ofrsResult = computePi2ofr(rs, rplus, rminus, r1, r2, r3, r4, ro, rs, true);
+    if (Pi2ofroResult.status != SUCCESS || Pi2ofrsResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float Pi2ofro = Pi2ofroResult.val;
+    float Pi2ofrs = Pi2ofrsResult.val;
+    
+    F2ofrResult F2ofroResult = F2ofr(ro, r1, r2, r3, r4);
+    F2ofrResult F2ofrsResult = F2ofr(rs, r1, r2, r3, r4);
+    if (F2ofroResult.status != SUCCESS || F2ofrsResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float F2ofro = F2ofroResult.val;
+    float F2ofrs = F2ofrsResult.val;
+
+    float mathcalIplusatro = -1.0 * Pi2ofro - F2ofro / (rplus - r3);
+    float mathcalIplusatrs = -1.0 * Pi2ofrs - F2ofrs / (rplus - r3);
+    
+    result.val = -1.0 * (mathcalIplusatro + mathcalIplusatrs);
+    result.status = SUCCESS;
+    return result;
+}
+
+Result computeIphi(float a, float M, float eta, float lambda, float ro, float rs, float r1, float r2, float r3, float r4) {
+    Result result;
+    
+    float rplus     = M + sqrt(M * M - a * a);
+    float rminus    = M - sqrt(M * M - a * a);
+    
+    float prefactor = (2.0 * M * a) / (rplus - rminus);
+    
+    Result IplusResult = computeIplus(rplus, rminus, r1, r2, r3, r4, ro, rs);
+    if (IplusResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float Iplus = IplusResult.val;
+    
+    Result IminusResult = computeIminus(rplus, rminus, r1, r2, r3, r4, ro, rs);
+    if (IminusResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float Iminus = IminusResult.val;
+    
+    result.val = prefactor * ((rplus - (a * lambda) / (2.0 * M)) * Iplus - (rminus - (a * lambda) / (2.0 * M)) * Iminus);
+    result.status = SUCCESS;
+    return result;
+}
+
 /*
 * NOTE - the interface for this function is different from
 * schwarzschildLense(). Here, we pass values of eta, lambda
@@ -353,7 +559,7 @@ CosThetaObserverResult cosThetaObserver(float nuthetas, float tau, float a, floa
 *
 * TODO: make sure to ensure non-vortical geodesics.
 */
-KerrLenseResult kerrLense(float a, float M, float ro, float rs, float eta, float lambda) {
+KerrLenseResult kerrLense(float a, float M, float thetas, float nuthetas, float ro, float rs, float eta, float lambda) {
     KerrLenseResult result;
     
     KerrRadialRootsResult rootsResult = kerrRadialRoots(a, M, eta, lambda);
@@ -389,6 +595,11 @@ KerrLenseResult kerrLense(float a, float M, float ro, float rs, float eta, float
         return result;
     }
     
+    /*
+     * Obtain the value of Ir. This gives us the elapsed mino time on the
+     * trajectory. Alex and Sam provide inversions for the coordinate
+     * trajectories as a function of mino time.
+    */
     IrResult IrResult = computeIr(a, M, ro, rs, r1, r2, r3, r4);
     if (IrResult.status != SUCCESS) {
         result.status = FAILURE;
@@ -397,7 +608,33 @@ KerrLenseResult kerrLense(float a, float M, float ro, float rs, float eta, float
     float Ir = IrResult.val;
     float tau = Ir;
     
+    /*
+     * With the mino time in hand, we can compute the value of theta_o, the
+     * polar angle of the point of intersection between the trajectory and
+     * the "source sphere."
+     */
+    CosThetaObserverResult cosThetaObserverResult = cosThetaObserver(nuthetas, tau, a, M, thetas, eta, lambda);
+    if (cosThetaObserverResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float cosThetaObserver = cosThetaObserverResult.val;
     
-
+    Result GphiResult = computeGphi(nuthetas, tau, a, M, thetas, eta, lambda);
+    if (GphiResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float Gphi = GphiResult.val;
+    
+    Result IphiResult = computeIphi(a, M, eta, lambda, ro, rs, r1, r2, r3, r4);
+    if (IphiResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float Iphi = IphiResult.val;
+    
+    result.costhetaf = cosThetaObserver;
+    result.phif = Iphi + lambda * Gphi;
     return result;
 }

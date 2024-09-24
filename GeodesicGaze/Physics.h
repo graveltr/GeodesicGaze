@@ -18,8 +18,8 @@ struct SchwarzschildLenseResult {
 };
 
 struct KerrLenseResult {
-    float thetas;
-    float phis;
+    float costhetaf;
+    float phif;
     int status;
 };
 

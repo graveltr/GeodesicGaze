@@ -70,7 +70,73 @@ float2 complex_pow(float2 z, float alpha) {
     return polar_to_cartesian(pow(polarCoords.x, alpha), alpha * polarCoords.y);
 }
 
+EllamResult asinOfSnShifted(float u, float m, float xShift, float yShift) {
+    EllamResult result;
+    
+    ElljacResult ellipjResult = ellipj(u - xShift, m);
+    if (ellipjResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float sn = ellipjResult.sn;
+    
+    result.am = sn + yShift;
+    result.status = SUCCESS;
+    return result;
+}
 
+EllamResult jacobiamShifted(float u, float m, float ellipticKofm, float yShift) {
+    EllamResult result;
+    
+    float deltaX = 2 * ellipticKofm;
+    EllamResult asinOfSnShiftedOfDeltaXResult = asinOfSnShifted(deltaX, m, ellipticKofm, yShift);
+    if (asinOfSnShiftedOfDeltaXResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    
+    float deltaY = asinOfSnShiftedOfDeltaXResult.am;
+    int n = floor(u / deltaX);
+    float r = u - n * deltaX;
+    
+    EllamResult asinOfSnShiftedOfrResult = asinOfSnShifted(r, m, ellipticKofm, yShift);
+    if (asinOfSnShiftedOfrResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+
+    result.am = n * deltaY + asinOfSnShiftedOfrResult.am;
+    return result;
+}
+
+EllamResult jacobiam(float u, float m) {
+    EllamResult result;
+    
+    EllintResult ellintResult = ellint_Kcomp_mma(m, 1e-5, 1e-5);
+    if (ellintResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float ellipticKofm = ellintResult.val;
+    float xShift = ellipticKofm;
+    
+    ElljacResult ellipjResult = ellipj(ellipticKofm, m);
+    if (ellipjResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    float yShift = asin(ellipjResult.sn);
+    
+    EllamResult intermediateResult = jacobiamShifted(u + ellipticKofm, m, ellipticKofm, yShift);
+    if (intermediateResult.status != SUCCESS) {
+        result.status = FAILURE;
+        return result;
+    }
+    
+    result.am = intermediateResult.am - yShift;
+    result.status = SUCCESS;
+    return result;
+}
 
 // A straightforward port of the GNU Scientific
 // Library's implementation of Jacobi elliptic functions.
@@ -603,6 +669,10 @@ EllintResult ellint_E_mma(float phi, float k, float errtol, float prec) {
 
 EllintResult ellint_P_mma(float phi, float k, float n, float errtol, float prec) {
     return ellint_P(phi, sqrt(k), -1.0 * n, errtol, prec);
+}
+
+EllintResult ellint_Kcomp_mma(float k, float errtol, float prec) {
+    return ellint_Kcomp(sqrt(k), errtol, prec);
 }
 
 float normalizeAngle(float phi) {

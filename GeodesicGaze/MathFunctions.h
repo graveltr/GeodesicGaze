@@ -29,7 +29,13 @@ struct ElljacResult {
     int status;
 };
 
+struct EllamResult {
+    float am;
+    int status;
+};
+
 ElljacResult ellipj(float u, float m);
+EllamResult jacobiam(float u, float m);
 
 EllintResult ellint_F(float phi, float k, float errtol, float prec);
 EllintResult ellint_E(float phi, float k, float errtol, float prec);
@@ -38,6 +44,7 @@ EllintResult ellint_P(float phi, float k, float n, float errtol, float prec);
 EllintResult ellint_F_mma(float phi, float k, float errtol, float prec);
 EllintResult ellint_E_mma(float phi, float k, float errtol, float prec);
 EllintResult ellint_P_mma(float phi, float k, float n, float errtol, float prec);
+EllintResult ellint_Kcomp_mma(float k, float errtol, float prec);
 
 float normalizeAngle(float phi);
 
