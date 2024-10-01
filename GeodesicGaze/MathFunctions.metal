@@ -70,8 +70,9 @@ float2 complex_pow(float2 z, float alpha) {
     return polar_to_cartesian(pow(polarCoords.x, alpha), alpha * polarCoords.y);
 }
 
-EllamResult asinOfSnShifted(float u, float m, float xShift, float yShift) {
-    EllamResult result;
+// TODO: fix this!
+ASinOfSnShiftedResult asinOfSnShifted(float u, float m, float xShift, float yShift) {
+    ASinOfSnShiftedResult result;
     
     ElljacResult ellipjResult = ellipj(u - xShift, m);
     if (ellipjResult.status != SUCCESS) {
@@ -80,7 +81,7 @@ EllamResult asinOfSnShifted(float u, float m, float xShift, float yShift) {
     }
     float sn = ellipjResult.sn;
     
-    result.am = sn + yShift;
+    result.val = asin(sn) + yShift;
     result.status = SUCCESS;
     return result;
 }
@@ -89,23 +90,23 @@ EllamResult jacobiamShifted(float u, float m, float ellipticKofm, float yShift) 
     EllamResult result;
     
     float deltaX = 2 * ellipticKofm;
-    EllamResult asinOfSnShiftedOfDeltaXResult = asinOfSnShifted(deltaX, m, ellipticKofm, yShift);
+    ASinOfSnShiftedResult asinOfSnShiftedOfDeltaXResult = asinOfSnShifted(deltaX, m, ellipticKofm, yShift);
     if (asinOfSnShiftedOfDeltaXResult.status != SUCCESS) {
         result.status = FAILURE;
         return result;
     }
     
-    float deltaY = asinOfSnShiftedOfDeltaXResult.am;
+    float deltaY = asinOfSnShiftedOfDeltaXResult.val;
     int n = floor(u / deltaX);
     float r = u - n * deltaX;
     
-    EllamResult asinOfSnShiftedOfrResult = asinOfSnShifted(r, m, ellipticKofm, yShift);
+    ASinOfSnShiftedResult asinOfSnShiftedOfrResult = asinOfSnShifted(r, m, ellipticKofm, yShift);
     if (asinOfSnShiftedOfrResult.status != SUCCESS) {
         result.status = FAILURE;
         return result;
     }
 
-    result.am = n * deltaY + asinOfSnShiftedOfrResult.am;
+    result.am = n * deltaY + asinOfSnShiftedOfrResult.val;
     result.status = SUCCESS;
     return result;
 }

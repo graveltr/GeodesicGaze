@@ -55,6 +55,15 @@ struct Result {
     var mathcalGthetasStatus: Int32
 }
 
+struct JacobiAmDebugResult {
+    var ellipticKofmValue: Float
+    var yShiftValue: Float
+    var intermediateResultValue: Float
+    var ellipticKofmStatus: Int32
+    var yShiftStatus: Int32
+    var intermediateResultStatus: Int32
+}
+
 struct PhiSResult {
     var val: Float
     var status: Int32
@@ -619,6 +628,27 @@ final class GeodesicGazeTests: XCTestCase {
         }
     }
     
+    func testJacobiAmDebug() {
+        let u: [Float] = [5.0]
+
+        let wrappedu = AnyBufferData(u)
+        let inputs: [AnyBufferData] = [wrappedu]
+        
+        let count = u.count
+        let resultBufferSize = count * MemoryLayout<JacobiAmDebugResult>.size;
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "jacobiam_debug_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: JacobiAmDebugResult.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            print(gpuResult)
+        }
+    }
+
     func testKerrLensing() {
         let dummyData: [Float] = [1.0]
 

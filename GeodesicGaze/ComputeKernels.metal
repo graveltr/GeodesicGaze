@@ -45,6 +45,15 @@ struct ResultForSwift {
     int mathcalGthetasStatus;
 };
 
+struct JacobiAmResultForSwift {
+    float ellipticKofmValue;
+    float yShiftValue;
+    float intermediateResultValue;
+    int ellipticKofmStatus;
+    int yShiftStatus;
+    int intermediateResultStatus;
+};
+
 kernel void ellint_F_compute_kernel(const device float *angles [[buffer(0)]],
                                     const device float *moduli [[buffer(1)]],
                                     device EllintResult *results [[buffer(2)]],
@@ -303,4 +312,33 @@ kernel void jacobiam_compute_kernel(const device float *u [[buffer(0)]],
                                device float *results [[buffer(2)]],
                                uint id [[thread_position_in_grid]]) {
     results[id] = jacobiam(u[id], m[id]).am;
+}
+
+kernel void jacobiam_debug_compute_kernel(const device float *uu [[buffer(0)]],
+                                    device JacobiAmResultForSwift *results [[buffer(1)]],
+                                    uint id [[thread_position_in_grid]]) {
+    JacobiAmResultForSwift result;
+    
+    float u = 5.0;
+    float m = 0.9;
+    
+    EllintResult ellintResult = ellint_Kcomp_mma(m, 1e-5, 1e-5);
+    float ellipticKofm = ellintResult.val;
+    float xShift = ellipticKofm;
+    
+    result.ellipticKofmValue = ellipticKofm;
+    result.ellipticKofmStatus = ellintResult.status;
+    
+    ElljacResult ellipjResult = ellipj(ellipticKofm, m);
+    float yShift = asin(ellipjResult.sn);
+    
+    result.yShiftValue = yShift;
+    result.yShiftStatus = ellipjResult.status;
+    
+    EllamResult intermediateResult = jacobiamShifted(u + ellipticKofm, m, ellipticKofm, yShift);
+    
+    result.intermediateResultValue = intermediateResult.am;
+    result.intermediateResultStatus = intermediateResult.status;
+
+    results[id] = result;
 }
