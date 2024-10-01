@@ -23,6 +23,12 @@ struct KerrLenseResult {
     int status;
 };
 
+struct FlatSpaceEtaLambdaResult {
+    float etaflat;
+    float lambdaflat;
+    int status;
+};
+
 struct PhiSResult {
     float val;
     int status;
@@ -37,6 +43,8 @@ float4 radialRoots(float M, float b);
 float3 computeABC(float a, float M, float eta, float lambda);
 float2 computePQ(float a, float M, float eta, float lambda);
 KerrRadialRootsResult kerrRadialRoots(float a, float M, float eta, float lambda);
+KerrLenseResult kerrLense(float a, float M, float thetas, float nuthetas, float ro, float rs, float eta, float lambda);
+FlatSpaceEtaLambdaResult flatSpaceEtaLambda(float ro, float thetao, float phio, float rs, float thetas, float phis);
 
 PhiSResult phiS(float M, float ro, float rs, float b);
 

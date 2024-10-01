@@ -220,7 +220,51 @@ fragment float4 kerrFragmentShader(VertexOut in [[stage_in]],
                                    texture2d<float, access::sample> backUVTexture [[texture(3)]],
                                    constant Uniforms &uniforms [[buffer(0)]],
                                    sampler s [[sampler(0)]]) {
+    /*
+     * The convention we use is to call the camera screen the "source" since we
+     * ray trace from this location back into the geometry.
+     */
+    float M = 1.0;
+    float a = 0.6;
+    float thetas = M_PI_F / 4.0;
+    float rs = 1000.0;
+    float ro = rs;
     
+    // Calculate the pixel coordinates of the current fragment
+    float2 pixelCoords = in.texCoord * float2(uniforms.backTextureWidth, uniforms.backTextureHeight);
     
-    return float4(0.0, 0.0, 0.0, 0.0)
+    // Calculate the pixel coordinates of the center of the image
+    float2 center = float2(uniforms.backTextureWidth / 2.0, uniforms.backTextureHeight / 2.0);
+    
+    // Place the center at the origin
+    float2 relativePixelCoords = pixelCoords - center;
+    
+    // Convert the pixel coordinates to coordinates in the image plane (alpha, beta)
+    float lengthPerPixel = 0.1;
+    float2 imagePlaneCoords = lengthPerPixel * relativePixelCoords;
+    float alpha = imagePlaneCoords.x;
+    float beta = imagePlaneCoords.y;
+
+    // Convert (alpha, beta) -> (lambda, eta)
+    float lambda = -1.0 * alpha * sin(thetas);
+    float eta = (alpha * alpha - a * a) * cos(thetas) * cos(thetas) + beta * beta;
+    float nuthetas = sign(beta);
+
+    // We don't currently handle the case of vortical geodesics
+    if (eta <= 0.0) {
+        return float4(1.0, 1.0, 1.0, 1.0);
+    }
+    
+    // Do the actual lensing. The result is a final theta and phi.
+    KerrLenseResult kerrLenseResult = kerrLense(a, M, thetas, nuthetas, ro, rs, eta, lambda);
+    if (kerrLenseResult.status != SUCCESS) {
+        return float4(1.0, 0.0, 0.0, 1.0);
+    }
+    float phif = kerrLenseResult.phif;
+    float thetaf = acos(kerrLenseResult.costhetaf);
+    
+    // Obtain the corresponding values of eta_flat, lambda_flat.
+    FlatSpaceEtaLambdaResult flatSpaceEtaLambdaResult = flatSpaceEtaLambda(ro, <#float thetao#>, <#float phio#>, <#float rs#>, <#float thetas#>, <#float phis#>)
+    
+    return float4(0.0, 0.0, 0.0, 0.0);
 }

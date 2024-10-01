@@ -556,8 +556,6 @@ Result computeIphi(float a, float M, float eta, float lambda, float ro, float rs
 * and obtain the resulting values of (r_s, theta_s, phi_s).
 * One still needs to obtain the corresponding eta, lambda
 * for the flat space geodesic.
-*
-* TODO: make sure to ensure non-vortical geodesics.
 */
 KerrLenseResult kerrLense(float a, float M, float thetas, float nuthetas, float ro, float rs, float eta, float lambda) {
     KerrLenseResult result;
@@ -636,5 +634,53 @@ KerrLenseResult kerrLense(float a, float M, float thetas, float nuthetas, float 
     
     result.costhetaf = cosThetaObserver;
     result.phif = Iphi + lambda * Gphi;
+    return result;
+}
+
+/*
+ * Given initial and final positions (computed via the lensing calculation)
+ * obtain the values of eta and lambda in flat space that yield a trajectory
+ * that intersects these positions.
+ */
+FlatSpaceEtaLambdaResult flatSpaceEtaLambda(float ro, float thetao, float phio, float rs, float thetas, float phis) {
+    FlatSpaceEtaLambdaResult result;
+    
+    float xo = ro * sin(thetao) * cos(phio);
+    float yo = ro * sin(thetao) * sin(phio);
+    float zo = ro * cos(thetao);
+    
+    float xs = rs * sin(thetas) * cos(phis);
+    float ys = rs * sin(thetas) * sin(phis);
+    float zs = rs * cos(thetas);
+    
+    float deltaX = xs - xo;
+    float deltaY = ys - yo;
+    float deltaZ = zs - zo;
+    
+    float denom = sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);
+    
+    float ux = deltaX / denom;
+    float uy = deltaY / denom;
+    float uz = deltaZ / denom;
+    
+    // Jacobian elements
+    float dthetadx = (xo * zo) / (ro * ro * sqrt(xo * xo + yo * yo));
+    float dthetady = (yo * zo) / (ro * ro * sqrt(xo * xo + yo * yo));
+    float dthetadz = (-1.0 * (xo * xo + yo * yo)) / (ro * ro * sqrt(xo * xo + yo * yo));
+    
+    float dphidx = (-1.0 * yo) / (xo * xo + yo * yo);
+    float dphidy = xo / (xo * xo + yo * yo);
+    float dphidz = 0;
+    
+    // Velocity in spherical coordinates
+    float uphi = dphidx * ux + dphidy * uy + dphidz * uz;
+    float utheta = dthetadx * ux + dthetady * uy + dthetadz * uz;
+    
+    float uphilower = ro * ro * sin(thetao) * sin(thetao) * uphi;
+    float uthetalower = ro * ro * utheta;
+    
+    result.lambdaflat = uphilower;
+    result.etaflat = uthetalower * uthetalower + tan(thetao - (M_PI_F / 2.0)) * tan(thetao - (M_PI_F / 2.0)) * uphilower * uphilower;
+    result.status = SUCCESS;
     return result;
 }
