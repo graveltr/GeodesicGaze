@@ -106,6 +106,7 @@ EllamResult jacobiamShifted(float u, float m, float ellipticKofm, float yShift) 
     }
 
     result.am = n * deltaY + asinOfSnShiftedOfrResult.am;
+    result.status = SUCCESS;
     return result;
 }
 

@@ -11,6 +11,11 @@
 #define EMITTED_FROM_BLACK_HOLE 3
 #define IMAGINARY_VALUE_ENCOUNTERED 4
 
+struct IrResult {
+    float val;
+    float status;
+};
+
 struct SchwarzschildLenseResult {
     float varphitilde;
     bool ccw;
@@ -26,6 +31,7 @@ struct KerrLenseResult {
 struct FlatSpaceEtaLambdaResult {
     float etaflat;
     float lambdaflat;
+    float uthetaSign;
     int status;
 };
 
@@ -39,12 +45,44 @@ struct KerrRadialRootsResult {
     int status;
 };
 
+struct CosThetaObserverResult {
+    float val;
+    float status;
+};
+
+struct Result {
+    float val;
+    float status;
+};
+
+struct F2ofrResult {
+    float val;
+    float status;
+};
+
+struct IphiResult {
+    float val;
+    float status;
+};
+
+struct MathcalGResult {
+    float val;
+    float status;
+};
+
+
 float4 radialRoots(float M, float b);
 float3 computeABC(float a, float M, float eta, float lambda);
 float2 computePQ(float a, float M, float eta, float lambda);
+IrResult computeIr(float a, float M, float ro, float rs, float r1, float r2, float r3, float r4);
+Result computeGphi(float nuthetas, float tau, float a, float M, float thetas, float eta, float lambda);
+Result mathcalGphi(float a, float theta, float uplus, float uminus);
+MathcalGResult mathcalGtheta(float a, float theta, float uplus, float uminus);
+Result Psitau(float a, float uplus, float uminus, float tau, float thetas, float nuthetas);
 KerrRadialRootsResult kerrRadialRoots(float a, float M, float eta, float lambda);
 KerrLenseResult kerrLense(float a, float M, float thetas, float nuthetas, float ro, float rs, float eta, float lambda);
-FlatSpaceEtaLambdaResult flatSpaceEtaLambda(float ro, float thetao, float phio, float rs, float thetas, float phis);
+FlatSpaceEtaLambdaResult flatSpaceEtaLambda(float rs, float thetas, float phis, float ro, float thetao, float phio);
+CosThetaObserverResult cosThetaObserver(float nuthetas, float tau, float a, float M, float thetas, float eta, float lambda);
 
 PhiSResult phiS(float M, float ro, float rs, float b);
 

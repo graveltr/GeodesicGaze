@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6911EB492CAC661A002B3656 /* MathFunctions.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6986093D2C74DBB200CD3B0F /* MathFunctions.metal */; };
+		6911EB4A2CAC6651002B3656 /* Physics.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6967E4732C862EC700E5C57D /* Physics.metal */; };
+		6911EB4B2CAC6658002B3656 /* Utilities.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6967E46F2C861FF800E5C57D /* Utilities.metal */; };
+		6911EB4C2CAC6664002B3656 /* ComputeKernels.metal in Sources */ = {isa = PBXBuildFile; fileRef = 69F7B4492C8547B600057475 /* ComputeKernels.metal */; };
 		6967E4702C861FF800E5C57D /* Utilities.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6967E46F2C861FF800E5C57D /* Utilities.metal */; };
 		6967E4742C862EC700E5C57D /* Physics.metal in Sources */ = {isa = PBXBuildFile; fileRef = 6967E4732C862EC700E5C57D /* Physics.metal */; };
 		6986092C2C74DB2800CD3B0F /* GeodesicGazeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6986092B2C74DB2800CD3B0F /* GeodesicGazeApp.swift */; };
@@ -280,7 +284,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				698F802A2C9B75B8001301C1 /* ComplexMath.metal in Sources */,
+				6911EB4A2CAC6651002B3656 /* Physics.metal in Sources */,
+				6911EB4B2CAC6658002B3656 /* Utilities.metal in Sources */,
 				69F7B4432C85419B00057475 /* GeodesicGazeTests.swift in Sources */,
+				6911EB4C2CAC6664002B3656 /* ComputeKernels.metal in Sources */,
+				6911EB492CAC661A002B3656 /* MathFunctions.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -436,6 +444,8 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				MTLLINKER_FLAGS = "-v";
+				MTL_COMPILER_FLAGS = "-v";
 				PRODUCT_BUNDLE_IDENTIFIER = trevor.GeodesicGaze;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -466,6 +476,8 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				MTLLINKER_FLAGS = "-v";
+				MTL_COMPILER_FLAGS = "-v";
 				PRODUCT_BUNDLE_IDENTIFIER = trevor.GeodesicGaze;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

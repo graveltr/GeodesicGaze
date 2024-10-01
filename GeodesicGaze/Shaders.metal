@@ -264,7 +264,34 @@ fragment float4 kerrFragmentShader(VertexOut in [[stage_in]],
     float thetaf = acos(kerrLenseResult.costhetaf);
     
     // Obtain the corresponding values of eta_flat, lambda_flat.
-    FlatSpaceEtaLambdaResult flatSpaceEtaLambdaResult = flatSpaceEtaLambda(ro, <#float thetao#>, <#float phio#>, <#float rs#>, <#float thetas#>, <#float phis#>)
+    FlatSpaceEtaLambdaResult flatSpaceEtaLambdaResult = flatSpaceEtaLambda(rs, thetas, 0, ro, thetaf, phif);
+    if (flatSpaceEtaLambdaResult.status != SUCCESS) {
+        return float4(1.0, 0.0, 0.0, 1.0);
+    }
+    float etaflat = flatSpaceEtaLambdaResult.etaflat;
+    float lambdaflat = flatSpaceEtaLambdaResult.lambdaflat;
+    float pthetaSign = flatSpaceEtaLambdaResult.uthetaSign;
     
-    return float4(0.0, 0.0, 0.0, 0.0);
+    // Map back to screen coordinates
+    float alphaflat = -1.0 * lambdaflat / sin(thetas);
+    float termUnderRadical = etaflat - lambdaflat * lambdaflat * (1.0 / tan(thetas)) * (1.0 / tan(thetas));
+    if (termUnderRadical < 0.0) {
+        return float4(0.0, 1.0, 0.0, 1.0);
+    }
+    float betaflat = pthetaSign * sqrt(termUnderRadical);
+    
+    // Unwind through the texture -> screen coordinate mappings
+    float2 transformedImagePlaneCoords = float2(alphaflat, betaflat);
+    float2 transformedRelativePixelCoords = transformedImagePlaneCoords / lengthPerPixel;
+    float2 transformedPixelCoords = transformedRelativePixelCoords + center;
+    float2 transformedTexCoord = transformedPixelCoords / float2(uniforms.backTextureWidth, uniforms.backTextureHeight);
+    
+    // Ensure that the texture coordinate is inbounds
+    if (transformedTexCoord.x < 0.0 || 1.0 < transformedTexCoord.x ||
+        transformedTexCoord.y < 0.0 || 1.0 < transformedTexCoord.y) {
+        return float4(0.0, 0.0, 1.0, 1.0);
+    }
+    
+    float3 rgb = sampleYUVTexture(backYTexture, backUVTexture, transformedTexCoord);
+    return float4(rgb, 1.0);
 }

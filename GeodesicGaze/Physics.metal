@@ -14,36 +14,6 @@
 
 using namespace metal;
 
-struct Result {
-    float val;
-    float status;
-};
-
-struct F2ofrResult {
-    float val;
-    float status;
-};
-
-struct IrResult {
-    float val;
-    float status;
-};
-
-struct IphiResult {
-    float val;
-    float status;
-};
-
-struct MathcalGResult {
-    float val;
-    float status;
-};
-
-struct CosThetaObserverResult {
-    float val;
-    float status;
-};
-
 // The roots of the radial potential.
 // ASSUMPTION: We assume that the caller
 // ensures bc < b => bc / b < 1 such that
@@ -273,7 +243,7 @@ F2ofrResult F2ofr(float r, float r1, float r2, float r3, float r4) {
     F2ofrResult result;
     
     float x2 = sqrt(((r - r4) / (r - r3)) * ((r3 - r1) / (r4 - r1)));
-    float prefactor = 2.0 / ((r3 - r1) * (r4 - r2));
+    float prefactor = 2.0 / sqrt((r3 - r1) * (r4 - r2));
     float phi = asin(x2);
     float k = ((r3 - r2) * (r4 - r1)) / ((r3 - r1) * (r4 - r2));
     
@@ -301,8 +271,7 @@ IrResult computeIr(float a, float M, float ro, float rs, float r1, float r2, flo
     float F2ofro = F2ofroResult.val;
     float F2ofrs = F2ofrsResult.val;
     
-    // TODO: verify this minus sign
-    result.val = -1.0 * (F2ofro + F2ofrs);
+    result.val = F2ofro + F2ofrs;
     result.status = SUCCESS;
     return result;
 }
@@ -642,20 +611,20 @@ KerrLenseResult kerrLense(float a, float M, float thetas, float nuthetas, float 
  * obtain the values of eta and lambda in flat space that yield a trajectory
  * that intersects these positions.
  */
-FlatSpaceEtaLambdaResult flatSpaceEtaLambda(float ro, float thetao, float phio, float rs, float thetas, float phis) {
+FlatSpaceEtaLambdaResult flatSpaceEtaLambda(float rs, float thetas, float phis, float ro, float thetao, float phio) {
     FlatSpaceEtaLambdaResult result;
-    
-    float xo = ro * sin(thetao) * cos(phio);
-    float yo = ro * sin(thetao) * sin(phio);
-    float zo = ro * cos(thetao);
     
     float xs = rs * sin(thetas) * cos(phis);
     float ys = rs * sin(thetas) * sin(phis);
     float zs = rs * cos(thetas);
     
-    float deltaX = xs - xo;
-    float deltaY = ys - yo;
-    float deltaZ = zs - zo;
+    float xo = ro * sin(thetao) * cos(phio);
+    float yo = ro * sin(thetao) * sin(phio);
+    float zo = ro * cos(thetao);
+
+    float deltaX = xo - xs;
+    float deltaY = yo - ys;
+    float deltaZ = zo - zs;
     
     float denom = sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);
     
@@ -664,23 +633,25 @@ FlatSpaceEtaLambdaResult flatSpaceEtaLambda(float ro, float thetao, float phio, 
     float uz = deltaZ / denom;
     
     // Jacobian elements
-    float dthetadx = (xo * zo) / (ro * ro * sqrt(xo * xo + yo * yo));
-    float dthetady = (yo * zo) / (ro * ro * sqrt(xo * xo + yo * yo));
-    float dthetadz = (-1.0 * (xo * xo + yo * yo)) / (ro * ro * sqrt(xo * xo + yo * yo));
+    float dthetadx = (xs * zs) / (rs * rs * sqrt(xs * xs + ys * ys));
+    float dthetady = (ys * zs) / (rs * rs * sqrt(xs * xs + ys * ys));
+    float dthetadz = (-1.0 * (xs * xs + ys * ys)) / (rs * rs * sqrt(xs * xs + ys * ys));
     
-    float dphidx = (-1.0 * yo) / (xo * xo + yo * yo);
-    float dphidy = xo / (xo * xo + yo * yo);
+    float dphidx = (-1.0 * ys) / (xs * xs + ys * ys);
+    float dphidy = xs / (xs * xs + ys * ys);
     float dphidz = 0;
     
     // Velocity in spherical coordinates
     float uphi = dphidx * ux + dphidy * uy + dphidz * uz;
     float utheta = dthetadx * ux + dthetady * uy + dthetadz * uz;
+    result.uthetaSign = sign(utheta);
     
-    float uphilower = ro * ro * sin(thetao) * sin(thetao) * uphi;
-    float uthetalower = ro * ro * utheta;
+    // Lower the indices using the Minkowski metric's spherical components
+    float uphilower = rs * rs * sin(thetas) * sin(thetas) * uphi;
+    float uthetalower = rs * rs * utheta;
     
     result.lambdaflat = uphilower;
-    result.etaflat = uthetalower * uthetalower + tan(thetao - (M_PI_F / 2.0)) * tan(thetao - (M_PI_F / 2.0)) * uphilower * uphilower;
+    result.etaflat = uthetalower * uthetalower + tan(thetas - (M_PI_F / 2.0)) * tan(thetas - (M_PI_F / 2.0)) * uphilower * uphilower;
     result.status = SUCCESS;
     return result;
 }

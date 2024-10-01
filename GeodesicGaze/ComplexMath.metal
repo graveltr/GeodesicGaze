@@ -6,11 +6,13 @@
 //
 
 #include <metal_stdlib>
-using namespace metal;
+#include "ComplexMath.h"
 #include "MathFunctions.h"
 
+using namespace metal;
+
 bool isReal(float2 z) {
-    return fEqual(z.y, 0);
+    return fEqual(z.y, 0.0);
 }
 
 float2 zWithMaxRealPart(float2 z1, float2 z2, float2 z3) {

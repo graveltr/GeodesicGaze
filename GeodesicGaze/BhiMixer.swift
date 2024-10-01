@@ -39,7 +39,7 @@ class BhiMixer {
     private func setupPipeline() {
         let library = device.makeDefaultLibrary()
         let vertexFunction = library?.makeFunction(name: "vertexShader")
-        let fragmentFunction = library?.makeFunction(name: "fragmentShader")
+        let fragmentFunction = library?.makeFunction(name: "kerrFragmentShader")
         
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.vertexFunction = vertexFunction
@@ -93,6 +93,8 @@ class BhiMixer {
                                 frontTextureHeight: Int32(frontTextureHeight),
                                 backTextureWidth: Int32(backTextureWidth),
                                 backTextureHeight: Int32(backTextureHeight))
+        
+        print("backWidth: \(uniforms.backTextureWidth) backHeight: \(uniforms.backTextureHeight)")
         let uniformsBuffer = device.makeBuffer(bytes: &uniforms, length: MemoryLayout<Uniforms>.size, options: .storageModeShared)
 
         renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0)
