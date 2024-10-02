@@ -47,12 +47,14 @@ struct Result {
     var mathcalGphisValue: Float
     var psiTauValue: Float
     var mathcalGthetasValue: Float
+    var IphiValue: Float
     var IrStatus: Int32
     var cosThetaObserverStatus: Int32
     var GphiStatus: Int32
     var mathcalGphisStatus: Int32
     var psiTauStatus: Int32
     var mathcalGthetasStatus: Int32
+    var IphiStatus: Int32
 }
 
 struct JacobiAmDebugResult {

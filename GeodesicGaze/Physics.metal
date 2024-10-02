@@ -458,7 +458,8 @@ Result computeIminus(float rplus, float rminus, float r1, float r2, float r3, fl
     float mathcalIplusatro = -1.0 * Pi2ofro - F2ofro / (rminus - r3);
     float mathcalIplusatrs = -1.0 * Pi2ofrs - F2ofrs / (rminus - r3);
     
-    result.val = -1.0 * (mathcalIplusatro + mathcalIplusatrs);
+    // TODO: is this sign correct???
+    result.val = (mathcalIplusatro + mathcalIplusatrs);
     result.status = SUCCESS;
     return result;
 }
@@ -487,7 +488,8 @@ Result computeIplus(float rplus, float rminus, float r1, float r2, float r3, flo
     float mathcalIplusatro = -1.0 * Pi2ofro - F2ofro / (rplus - r3);
     float mathcalIplusatrs = -1.0 * Pi2ofrs - F2ofrs / (rplus - r3);
     
-    result.val = -1.0 * (mathcalIplusatro + mathcalIplusatrs);
+    // TODO: is this sign correct???
+    result.val = (mathcalIplusatro + mathcalIplusatrs);
     result.status = SUCCESS;
     return result;
 }

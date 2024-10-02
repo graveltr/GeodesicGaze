@@ -70,7 +70,6 @@ float2 complex_pow(float2 z, float alpha) {
     return polar_to_cartesian(pow(polarCoords.x, alpha), alpha * polarCoords.y);
 }
 
-// TODO: fix this!
 ASinOfSnShiftedResult asinOfSnShifted(float u, float m, float xShift, float yShift) {
     ASinOfSnShiftedResult result;
     

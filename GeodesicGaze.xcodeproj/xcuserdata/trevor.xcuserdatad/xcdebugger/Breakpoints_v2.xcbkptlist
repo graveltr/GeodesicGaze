@@ -30,8 +30,8 @@
             filePath = "GeodesicGazeTests/GeodesicGazeTests.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "686"
-            endingLineNumber = "686"
+            startingLineNumber = "688"
+            endingLineNumber = "688"
             landmarkName = "testKerr()"
             landmarkType = "7">
          </BreakpointContent>
@@ -46,40 +46,10 @@
             filePath = "GeodesicGazeTests/GeodesicGazeTests.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "645"
-            endingLineNumber = "645"
+            startingLineNumber = "647"
+            endingLineNumber = "647"
             landmarkName = "testJacobiAmDebug()"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "4C8950A9-8B38-4BEA-86B8-D39CF50CD998 - a6d6d8d5b92434e1"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "GeodesicGazeTests.GeodesicGazeTests.testJacobiAmDebug() -&gt; ()"
-                  moduleName = "GeodesicGazeTests"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/trevor/Documents/GeodesicGaze/GeodesicGazeTests/GeodesicGazeTests.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "646"
-                  endingLineNumber = "646">
-               </Location>
-               <Location
-                  uuid = "4C8950A9-8B38-4BEA-86B8-D39CF50CD998 - a6d6d8d5b92434e1"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "GeodesicGazeTests.GeodesicGazeTests.testJacobiAmDebug() -&gt; ()"
-                  moduleName = "GeodesicGazeTests"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/trevor/Documents/GeodesicGaze/GeodesicGazeTests/GeodesicGazeTests.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "646"
-                  endingLineNumber = "646">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

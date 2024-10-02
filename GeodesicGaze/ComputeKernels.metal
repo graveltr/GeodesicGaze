@@ -37,12 +37,14 @@ struct ResultForSwift {
     float mathcalGphisValue;
     float psiTauValue;
     float mathcalGthetasValue;
+    float IphiValue;
     int IrStatus;
     int cosThetaObserverStatus;
     int GphiStatus;
     int mathcalGphisStatus;
     int psiTauStatus;
     int mathcalGthetasStatus;
+    int IphiStatus;
 };
 
 struct JacobiAmResultForSwift {
@@ -267,11 +269,9 @@ kernel void tau_compute_kernel(const device float *dummyData [[buffer(0)]],
     
     // TODO: Resolve this error!
     // START Gphi
-    /*
     Result GphiResult = computeGphi(1, tau, a, M, thetas, eta, lambda);
     result.GphiValue = GphiResult.val;
     result.GphiStatus = GphiResult.status;
-    */
     
     float deltaTheta = (1.0 / 2.0) * (1.0 - (eta + lambda * lambda) / (a * a));
     
@@ -301,9 +301,15 @@ kernel void tau_compute_kernel(const device float *dummyData [[buffer(0)]],
     EllamResult amResult = jacobiam(u, m);
     result.psiTauValue = amResult.am;
     result.psiTauStatus = amResult.status;
+    
     // END PSITAU
     
     // END Gphi
+    
+    Result IphiResult = computeIphi(a, M, eta, lambda, ro, rs, r1, r2, r3, r4);
+    float Iphi = IphiResult.val;
+    result.IphiValue = Iphi;
+    result.IphiStatus = IphiResult.status;
 
     results[id] = result;
 }

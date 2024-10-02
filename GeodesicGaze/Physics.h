@@ -83,6 +83,7 @@ KerrRadialRootsResult kerrRadialRoots(float a, float M, float eta, float lambda)
 KerrLenseResult kerrLense(float a, float M, float thetas, float nuthetas, float ro, float rs, float eta, float lambda);
 FlatSpaceEtaLambdaResult flatSpaceEtaLambda(float rs, float thetas, float phis, float ro, float thetao, float phio);
 CosThetaObserverResult cosThetaObserver(float nuthetas, float tau, float a, float M, float thetas, float eta, float lambda);
+Result computeIphi(float a, float M, float eta, float lambda, float ro, float rs, float r1, float r2, float r3, float r4);
 
 PhiSResult phiS(float M, float ro, float rs, float b);
 
