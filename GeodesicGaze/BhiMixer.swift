@@ -28,6 +28,8 @@ class BhiMixer {
     var backUVTexture: MTLTexture?
     var backTextureHeight: Int?
     var backTextureWidth: Int?
+    
+    var lutTexture: MTLTexture!
 
     init(device: MTLDevice) {
         self.device = device
@@ -52,6 +54,20 @@ class BhiMixer {
         } catch {
             fatalError("Failed to create pipeline state")
         }
+    }
+    
+    func createLUTTexture(width: Int, height: Int) {
+        let descriptor = MTLTextureDescriptor()
+        descriptor.pixelFormat = .rgba32Float
+        descriptor.width = width
+        descriptor.height = height
+        descriptor.usage = [.shaderRead, .shaderWrite]
+        
+        lutTexture = device.makeTexture(descriptor: descriptor)
+    }
+    
+    func precomputeLUTTexture() {
+        
     }
     
     func mix(frontCameraPixelBuffer: CVPixelBuffer?,

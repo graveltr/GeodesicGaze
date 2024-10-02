@@ -225,8 +225,8 @@ fragment float4 kerrFragmentShader(VertexOut in [[stage_in]],
      * ray trace from this location back into the geometry.
      */
     float M = 1.0;
-    float a = 0.6;
-    float thetas = M_PI_F / 4.0;
+    float a = 0.99;
+    float thetas = M_PI_F / 2.0;
     float rs = 1000.0;
     float ro = rs;
     
