@@ -52,5 +52,51 @@
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "7648E703-3A9D-49B3-9DD6-CB486CC40DE0"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "GeodesicGazeTests/GeodesicGazeTests.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "668"
+            endingLineNumber = "668"
+            landmarkName = "testKerrLensing()"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "7648E703-3A9D-49B3-9DD6-CB486CC40DE0 - 2b6ff9b3a2a428e4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "GeodesicGazeTests.GeodesicGazeTests.testKerrLensing() -&gt; ()"
+                  moduleName = "GeodesicGazeTests"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/trevor/Documents/GeodesicGaze/GeodesicGazeTests/GeodesicGazeTests.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "668"
+                  endingLineNumber = "668">
+               </Location>
+               <Location
+                  uuid = "7648E703-3A9D-49B3-9DD6-CB486CC40DE0 - 2b6ff9b3a2a428e4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "GeodesicGazeTests.GeodesicGazeTests.testKerrLensing() -&gt; ()"
+                  moduleName = "GeodesicGazeTests"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/trevor/Documents/GeodesicGaze/GeodesicGazeTests/GeodesicGazeTests.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "668"
+                  endingLineNumber = "668">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
    </Breakpoints>
 </Bucket>

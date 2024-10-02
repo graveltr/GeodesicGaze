@@ -605,6 +605,7 @@ KerrLenseResult kerrLense(float a, float M, float thetas, float nuthetas, float 
     
     result.costhetaf = cosThetaObserver;
     result.phif = Iphi + lambda * Gphi;
+    result.status = SUCCESS;
     return result;
 }
 

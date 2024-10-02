@@ -197,7 +197,7 @@ kernel void kerr_lense_compute_kernel(const device float *dummyData [[buffer(0)]
 
     // We don't currently handle the case of vortical geodesics
     if (eta <= 0.0) {
-    return;
+        return;
     }
 
     // Do the actual lensing. The result is a final theta and phi.
@@ -233,7 +233,7 @@ kernel void kerr_lense_compute_kernel(const device float *dummyData [[buffer(0)]
 
     // Ensure that the texture coordinate is inbounds
     if (transformedTexCoord.x < 0.0 || 1.0 < transformedTexCoord.x ||
-    transformedTexCoord.y < 0.0 || 1.0 < transformedTexCoord.y) {
+        transformedTexCoord.y < 0.0 || 1.0 < transformedTexCoord.y) {
     }
 
     results[id] = result;
