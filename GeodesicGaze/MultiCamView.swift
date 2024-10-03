@@ -3,7 +3,7 @@ import AVFoundation
 import MetalKit
 
 struct MultiCamView: UIViewControllerRepresentable {
-    class Coordinator: NSObject, MultiCamCaptureDelegate {
+    class Coordinator: NSObject, MultiCamCaptureDelegate, MTKViewDelegate {
         var parent: MultiCamView
         var mixer: BhiMixer
         var mtkView: MTKView
@@ -14,6 +14,8 @@ struct MultiCamView: UIViewControllerRepresentable {
             self.mtkView = mtkView
             self.mixer = mixer
             self.multiCamCapture = multiCamCapture
+            super.init()
+            self.mtkView.delegate = self
         }
         
         func processCameraPixelBuffers(frontCameraPixelBuffer: CVPixelBuffer, backCameraPixelBuffer: CVPixelBuffer) {
@@ -21,6 +23,13 @@ struct MultiCamView: UIViewControllerRepresentable {
                       backCameraPixelBuffer: backCameraPixelBuffer,
                       in: mtkView)
         }
+        
+        func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+          mixer.createLutTexture(width: Int(size.width), height: Int(size.height))
+          mixer.precomputeLutTexture()
+        }
+        
+        func draw(in view: MTKView) {}
     }
 
     func makeCoordinator() -> Coordinator {

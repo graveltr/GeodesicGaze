@@ -14,12 +14,18 @@ class BhiMixer {
         var frontTextureHeight: Int32
         var backTextureWidth: Int32
         var backTextureHeight: Int32
+        var mode: Int32
+    }
+    
+    struct PreComputeUniforms {
+        var mode: Int32
     }
     
     var device: MTLDevice!
     var commandQueue: MTLCommandQueue!
     var textureCache: CVMetalTextureCache!
     var pipelineState: MTLRenderPipelineState!
+    var computePipelineState: MTLComputePipelineState!
     var frontYTexture: MTLTexture?
     var frontUVTexture: MTLTexture?
     var frontTextureHeight: Int?
@@ -28,20 +34,22 @@ class BhiMixer {
     var backUVTexture: MTLTexture?
     var backTextureHeight: Int?
     var backTextureWidth: Int?
+    var mode: Int32!
     
     var lutTexture: MTLTexture!
 
     init(device: MTLDevice) {
         self.device = device
         self.commandQueue = device.makeCommandQueue()
+        self.mode = 0
         CVMetalTextureCacheCreate(nil, nil, device, nil, &textureCache)
-        setupPipeline()
+        setupPipelines()
     }
     
-    private func setupPipeline() {
+    private func setupPipelines() {
         let library = device.makeDefaultLibrary()
         let vertexFunction = library?.makeFunction(name: "vertexShader")
-        let fragmentFunction = library?.makeFunction(name: "kerrFragmentShader")
+        let fragmentFunction = library?.makeFunction(name: "preComputedFragmentShader")
         
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.vertexFunction = vertexFunction
@@ -54,9 +62,12 @@ class BhiMixer {
         } catch {
             fatalError("Failed to create pipeline state")
         }
+        
+        let computeFunction = library?.makeFunction(name: "precomputeLut")
+        computePipelineState = try! device.makeComputePipelineState(function: computeFunction!)
     }
     
-    func createLUTTexture(width: Int, height: Int) {
+    func createLutTexture(width: Int, height: Int) {
         let descriptor = MTLTextureDescriptor()
         descriptor.pixelFormat = .rgba32Float
         descriptor.width = width
@@ -66,8 +77,33 @@ class BhiMixer {
         lutTexture = device.makeTexture(descriptor: descriptor)
     }
     
-    func precomputeLUTTexture() {
+    func precomputeLutTexture() {
+        let commandBuffer = commandQueue.makeCommandBuffer()!
+        let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
         
+        computeEncoder.setComputePipelineState(computePipelineState)
+        
+        var uniforms = PreComputeUniforms(mode: mode)
+        let uniformsBuffer = device.makeBuffer(bytes: &uniforms, length: MemoryLayout<PreComputeUniforms>.size, options: .storageModeShared)
+        
+        computeEncoder.setBuffer(uniformsBuffer, offset: 0, index: 0)
+        computeEncoder.setTexture(lutTexture, index: 0)
+        
+        /*
+         * lutTexture.dimension + groupSize - 1 / groupSize is just
+         * lutTexture.dimension / groupSize rounded up. This guarantees
+         * that group * groupSize covers the full texture width / height.
+         */
+        let threadGroupSize = MTLSize(width: 16, height: 16, depth: 1)
+        let threadGroups = MTLSize(width: (lutTexture.width + 15) / 16,
+                                   height: (lutTexture.height + 15) / 16,
+                                   depth: 1)
+        
+        computeEncoder.dispatchThreadgroups(threadGroups, threadsPerThreadgroup: threadGroupSize)
+        computeEncoder.endEncoding()
+        
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
     }
     
     func mix(frontCameraPixelBuffer: CVPixelBuffer?,
@@ -108,7 +144,8 @@ class BhiMixer {
         var uniforms = Uniforms(frontTextureWidth: Int32(frontTextureWidth), 
                                 frontTextureHeight: Int32(frontTextureHeight),
                                 backTextureWidth: Int32(backTextureWidth),
-                                backTextureHeight: Int32(backTextureHeight))
+                                backTextureHeight: Int32(backTextureHeight),
+                                mode: mode)
         
         print("backWidth: \(uniforms.backTextureWidth) backHeight: \(uniforms.backTextureHeight)")
         let uniformsBuffer = device.makeBuffer(bytes: &uniforms, length: MemoryLayout<Uniforms>.size, options: .storageModeShared)
@@ -129,7 +166,8 @@ class BhiMixer {
         renderEncoder.setFragmentTexture(frontUVTexture, index: 1)
         renderEncoder.setFragmentTexture(backYTexture, index: 2)
         renderEncoder.setFragmentTexture(backUVTexture, index: 3)
-        
+        renderEncoder.setFragmentTexture(lutTexture, index: 4)
+
         print("Successfully set fragment textures and buffers")
 
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
