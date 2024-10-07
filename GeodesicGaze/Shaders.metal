@@ -317,6 +317,14 @@ fragment float4 kerrFragmentShader(VertexOut in [[stage_in]],
     return float4(rgb, 1.0);
 }
 
+float2 getPipCoord(float2 pipOrigin, float pipHeight, float pipWidth, float2 coord) {
+    float2 displacement = coord - pipOrigin;
+    float2 renormalizedCoord = float2(displacement.x / pipWidth, displacement.y / pipHeight);
+    
+    return renormalizedCoord;
+}
+
+
 fragment float4 preComputedFragmentShader(VertexOut in [[stage_in]],
                                           texture2d<float, access::sample> frontYTexture [[texture(0)]],
                                           texture2d<float, access::sample> frontUVTexture [[texture(1)]],
@@ -325,6 +333,19 @@ fragment float4 preComputedFragmentShader(VertexOut in [[stage_in]],
                                           texture2d<float, access::sample> lutTexture [[texture(4)]],
                                           constant Uniforms &uniforms [[buffer(0)]]) {
     constexpr sampler s(coord::normalized, address::clamp_to_edge, filter::linear);
+
+    float2 pipOrigin = float2(0.05, 0.05);
+    float aRatio = 1.2;
+    float pipHeight = 0.22;
+    float pipWidth = pipHeight * aRatio;
+    
+    float2 pipCoord = getPipCoord(pipOrigin, pipHeight, pipWidth, in.texCoord);
+    if (    0.0 < pipCoord.x && pipCoord.x < 1.0
+        &&  0.0 < pipCoord.y && pipCoord.y < 1.0) {
+        float3 rgb = sampleYUVTexture(backYTexture, backUVTexture, pipCoord);
+        return float4(rgb, 1.0);
+    }
+
     float4 lutSample = lutTexture.sample(s, in.texCoord);
     
     float2 transformedTexCoord = lutSample.xy;
@@ -351,7 +372,7 @@ fragment float4 preComputedFragmentShader(VertexOut in [[stage_in]],
             float3 rgb = sampleYUVTexture(backYTexture, backUVTexture, transformedTexCoord);
             return float4(rgb, 1.0);
         } else if (fEqual(statusCode[0], 0.0) && fEqual(statusCode[1], 1.0)) {
-            return float4(1.0, 0.0, 0.0, 1.0);
+            return float4(0.0, 0.0, 0.0, 1.0);
         } else if (fEqual(statusCode[0], 1.0) && fEqual(statusCode[1], 0.0)) {
             return float4(0.0, 1.0, 0.0, 1.0);
         } else if (fEqual(statusCode[0], 1.0) && fEqual(statusCode[1], 1.0)) {
@@ -430,24 +451,51 @@ LenseTextureCoordinateResult schwarzschildLenseTextureCoordinate(float2 inCoord)
     return result;
 }
 
+float2 pixelToScreen(float2 pixelCoords) {
+    float base = 0.04;
+    float rcrit = 300.0;
+    float alpha = 1000.0;
+    int n = 1;
+    
+    float r = sqrt(pixelCoords.x * pixelCoords.x + pixelCoords.y * pixelCoords.y);
+    
+    if (r < rcrit) {
+        return base * pixelCoords;
+    }
+    
+    return ((1.0 / alpha) * pow(r - rcrit, n) + base) * pixelCoords;
+}
 
+float2 pixelToScreenZoomAboutCriticalCurve(float2 pixelCoords) {
+    float base = 0.04;
+    float rcrit = 180.0;
+    
+    float r = sqrt(pixelCoords.x * pixelCoords.x + pixelCoords.y * pixelCoords.y);
+    float theta = atan2(pixelCoords.y, pixelCoords.x);
+    
+    if (r < rcrit) {
+        return base * pixelCoords;
+    }
+    
+    float alpha = 0.01;
+    float rtilde = rcrit + alpha * (r - rcrit);
+    
+    return base * float2(rtilde * cos(theta), rtilde * sin(theta));
+}
 
 LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode) {
     LenseTextureCoordinateResult result;
     
-    /*
-     * The convention we use is to call the camera screen the "source" since we
-     * ray trace from this location back into the geometry.
-     */
     float backTextureWidth = 1920.0;
     float backTextureHeight = 1080.0;
-    
+    float aspectRatio = backTextureWidth / backTextureHeight;
+
     /*
      * The convention we use is to call the camera screen the "source" since we
      * ray trace from this location back into the geometry.
      */
     float M = 1.0;
-    float a = 0.8;
+    float a = 0.9;
     float thetas = M_PI_F / 2.0;
     float rs = 1000.0;
     float ro = rs;
@@ -462,8 +510,7 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
     float2 relativePixelCoords = pixelCoords - center;
     
     // Convert the pixel coordinates to coordinates in the image plane (alpha, beta)
-    float lengthPerPixel = 0.03;
-    float2 imagePlaneCoords = lengthPerPixel * relativePixelCoords;
+    float2 imagePlaneCoords = pixelToScreen(relativePixelCoords);
     float alpha = imagePlaneCoords.x;
     float beta = imagePlaneCoords.y;
 
@@ -565,7 +612,6 @@ kernel void precomputeLut(texture2d<float, access::write> lut [[texture(0)]],
     // This is normalizing to texture coordinate between 0 and 1
     float2 originalCoord = float2(gid) / float2(lut.get_width(), lut.get_height());
     LenseTextureCoordinateResult result = kerrLenseTextureCoordinate(originalCoord, uniforms.mode);
-    
     // Need to pass the status code within the look-up table. We do so in the
     // zw components with binary strings (00, 01, 10, 11)
     

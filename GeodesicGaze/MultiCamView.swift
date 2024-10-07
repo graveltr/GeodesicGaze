@@ -55,6 +55,7 @@ struct MultiCamView: UIViewControllerRepresentable {
         mtkView.frame = CGRect(x: 0, y: 2 * videoViewHeight, width: viewController.view.bounds.width, height: videoViewHeight)
         */
         
+        /*
         let lensedViewHeight = viewController.view.bounds.height * 0.8;
         let previewViewHeight = viewController.view.bounds.height * 0.2;
         
@@ -79,6 +80,19 @@ struct MultiCamView: UIViewControllerRepresentable {
 
         let multiCamCapture = context.coordinator.multiCamCapture
         multiCamCapture.setupPreviewLayers(frontView: frontView, backView: backView)
+        multiCamCapture.delegate = context.coordinator
+        multiCamCapture.startRunning()
+         */
+        
+        let mtkView = context.coordinator.mtkView
+        mtkView.frame = CGRect(x: 0,
+                               y: 0,
+                               width:   viewController.view.bounds.width,
+                               height:  viewController.view.bounds.height)
+        
+        viewController.view.addSubview(mtkView)
+
+        let multiCamCapture = context.coordinator.multiCamCapture
         multiCamCapture.delegate = context.coordinator
         multiCamCapture.startRunning()
 
