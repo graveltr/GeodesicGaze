@@ -334,15 +334,24 @@ fragment float4 preComputedFragmentShader(VertexOut in [[stage_in]],
                                           constant Uniforms &uniforms [[buffer(0)]]) {
     constexpr sampler s(coord::normalized, address::clamp_to_edge, filter::linear);
 
-    float2 pipOrigin = float2(0.05, 0.05);
-    float aRatio = 1.2;
+    float2 backPipOrigin = float2(0.05, 0.7);
+    float2 frontPipOrigin = float2(0.05, 0.05);
+    
+    float aRatio = 1.00;
     float pipHeight = 0.22;
     float pipWidth = pipHeight * aRatio;
     
-    float2 pipCoord = getPipCoord(pipOrigin, pipHeight, pipWidth, in.texCoord);
-    if (    0.0 < pipCoord.x && pipCoord.x < 1.0
-        &&  0.0 < pipCoord.y && pipCoord.y < 1.0) {
-        float3 rgb = sampleYUVTexture(backYTexture, backUVTexture, pipCoord);
+    float2 backPipCoord = getPipCoord(backPipOrigin, pipHeight, pipWidth, in.texCoord);
+    if (    0.0 < backPipCoord.x && backPipCoord.x < 1.0
+        &&  0.0 < backPipCoord.y && backPipCoord.y < 1.0) {
+        float3 rgb = sampleYUVTexture(backYTexture, backUVTexture, backPipCoord);
+        return float4(rgb, 1.0);
+    }
+    
+    float2 frontPipCoord = getPipCoord(frontPipOrigin, pipHeight, pipWidth, in.texCoord);
+    if (    0.0 < frontPipCoord.x && frontPipCoord.x < 1.0
+        &&  0.0 < frontPipCoord.y && frontPipCoord.y < 1.0) {
+        float3 rgb = sampleYUVTexture(frontYTexture, frontUVTexture, frontPipCoord);
         return float4(rgb, 1.0);
     }
 

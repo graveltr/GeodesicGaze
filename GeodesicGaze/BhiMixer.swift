@@ -109,6 +109,11 @@ class BhiMixer {
     func mix(frontCameraPixelBuffer: CVPixelBuffer?,
              backCameraPixelBuffer: CVPixelBuffer?,
              in view: MTKView) {
+        
+        guard let drawable = view.currentDrawable else {
+            return
+        }
+        
         print("Mixing ...")
         if let frontCameraPixelBuffer = frontCameraPixelBuffer {
             let textures = createTexture(from: frontCameraPixelBuffer)
