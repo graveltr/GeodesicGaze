@@ -348,3 +348,58 @@ kernel void jacobiam_debug_compute_kernel(const device float *uu [[buffer(0)]],
 
     results[id] = result;
 }
+
+kernel void spherical_to_cartesian_compute_kernel(const device float *r [[buffer(0)]],
+                                                  const device float *theta [[buffer(1)]],
+                                                  const device float *phi [[buffer(2)]],
+                                                  device float3 *results [[buffer(3)]],
+                                                  uint id [[thread_position_in_grid]]) {
+    results[id] = sphericalToCartesian(float3(r[id], theta[id], phi[id]));
+}
+
+kernel void cartesian_to_spherical_compute_kernel(const device float *x [[buffer(0)]],
+                                                  const device float *y [[buffer(1)]],
+                                                  const device float *z [[buffer(2)]],
+                                                  device float3 *results [[buffer(3)]],
+                                                  uint id [[thread_position_in_grid]]) {
+    results[id] = cartesianToSpherical(float3(x[id], y[id], z[id]));
+}
+
+kernel void rotate_spherical_coordinates_compute_kernel(const device float *vsR     [[buffer(0)]],
+                                                        const device float *vsTheta [[buffer(1)]],
+                                                        const device float *vsPhi   [[buffer(2)]],
+                                                        const device float *voR     [[buffer(3)]],
+                                                        const device float *voTheta [[buffer(4)]],
+                                                        const device float *voPhi   [[buffer(5)]],
+                                                        device float3 *results      [[buffer(6)]],
+                                                        uint id [[thread_position_in_grid]]) {
+    float3 vsSpherical = float3(vsR[id], vsTheta[id], vsPhi[id]);
+    float3 voSpherical = float3(voR[id], voTheta[id], voPhi[id]);
+
+    float3 vsCartesian = sphericalToCartesian(vsSpherical);
+    float3 voCartesian = sphericalToCartesian(voSpherical);
+    
+    float3 zhat = float3(0.0, 0.0, 1.0);
+
+    float3 n1 = vsCartesian / length(vsCartesian);
+    
+    float3 v2 = zhat - dot(zhat, n1) * n1;
+    float3 n2;
+    if (fEqual(length(v2), 0.0)) {
+        // When polar observer, n2 = 0 -> degenerate, arbitrary
+        // up direction, just pick one in the plane.
+        n2 = float3(0.0, 1.0, 0.0);
+    } else {
+        n2 = v2 / length(v2);
+    }
+    
+    float3 n3 = cross(n2, n1);
+    
+    // This is just matrix multiplication by the matrix
+    // whose rows are {n1, n3, n2}.
+    float3 voHatCartesian = float3(dot(n1, voCartesian),
+                                   dot(n3, voCartesian),
+                                   dot(n2, voCartesian));
+    
+    results[id] = cartesianToSpherical(voHatCartesian);
+}

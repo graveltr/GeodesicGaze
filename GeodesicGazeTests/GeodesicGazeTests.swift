@@ -688,4 +688,121 @@ final class GeodesicGazeTests: XCTestCase {
             print(gpuResults[i])
         }
     }
+    
+    func testSphericalToCartesian() {
+        let r:      [Float] = [1.0]
+        let theta:  [Float] = [3.14159265 / 2.0]
+        let phi:    [Float] = [3.14159265 / 2.0]
+
+        let wrappedr        = AnyBufferData(r)
+        let wrappedTheta    = AnyBufferData(theta)
+        let wrappedPhi      = AnyBufferData(phi)
+        let inputs: [AnyBufferData] = [wrappedr, wrappedTheta, wrappedPhi]
+        
+        let count = r.count
+        let resultBufferSize = count * MemoryLayout<simd_float3>.size;
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "spherical_to_cartesian_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: simd_float3.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults = [
+            simd_float3(x: 0.0, y: 1.0, z: 0.0)
+        ]
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            print("gpu result: \(gpuResult)")
+            print("expected result: \(expectedResult)")
+            
+            XCTAssertEqual(gpuResult.x, expectedResult.x, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.y, expectedResult.y, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.z, expectedResult.z, accuracy: 1e-3, "Value mismatch at index \(i)")
+        }
+    }
+    
+    func testCartesianToSpherical() {
+        let x: [Float] = [0.0]
+        let y: [Float] = [1.0 / sqrt(2.0)]
+        let z: [Float] = [1.0 / sqrt(2.0)]
+
+        let wrappedx = AnyBufferData(x)
+        let wrappedy = AnyBufferData(y)
+        let wrappedz = AnyBufferData(z)
+        let inputs: [AnyBufferData] = [wrappedx, wrappedy, wrappedz]
+        
+        let count = x.count
+        let resultBufferSize = count * MemoryLayout<simd_float3>.size;
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "cartesian_to_spherical_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: simd_float3.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults = [
+            simd_float3(x: 1.0, y: 3.14159265 / 4.0, z: 3.14159265 / 2.0)
+        ]
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            print("gpu result: \(gpuResult)")
+            print("expected result: \(expectedResult)")
+            
+            XCTAssertEqual(gpuResult.x, expectedResult.x, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.y, expectedResult.y, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.z, expectedResult.z, accuracy: 1e-3, "Value mismatch at index \(i)")
+        }
+    }
+    
+    func testRotateSpherical() {
+        let pi: Float = 3.14159265;
+        
+        let vsR:        [Float] = [10.0]
+        let vsTheta:    [Float] = [pi / 4.0]
+        let vsPhi:      [Float] = [0.0]
+        
+        let voR:        [Float] = [10.0]
+        let voTheta:    [Float] = [3.0 * pi / 4.0]
+        let voPhi:      [Float] = [pi]
+
+        let wrappedVsR      = AnyBufferData(vsR)
+        let wrappedVsTheta  = AnyBufferData(vsTheta)
+        let wrappedVsPhi    = AnyBufferData(vsPhi)
+        
+        let wrappedVoR      = AnyBufferData(voR)
+        let wrappedVoTheta  = AnyBufferData(voTheta)
+        let wrappedVoPhi    = AnyBufferData(voPhi)
+        
+        let inputs: [AnyBufferData] = [wrappedVsR, wrappedVsTheta, wrappedVsPhi, wrappedVoR, wrappedVoTheta, wrappedVoPhi]
+        
+        let count = vsR.count
+        let resultBufferSize = count * MemoryLayout<simd_float3>.size;
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "rotate_spherical_coordinates_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: simd_float3.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults = [
+            simd_float3(x: 10.0, y: pi / 2.0, z: pi)
+        ]
+        
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            print("gpu result: \(gpuResult)")
+            print("expected result: \(expectedResult)")
+            
+            XCTAssertEqual(gpuResult.x, expectedResult.x, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.y, expectedResult.y, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.z, expectedResult.z, accuracy: 1e-3, "Value mismatch at index \(i)")
+        }
+    }
+
 }
