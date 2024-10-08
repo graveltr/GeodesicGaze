@@ -502,7 +502,14 @@ float3 rotateSphericalCoordinate(float3 vsSpherical, float3 voSpherical) {
     float3 n1 = vsCartesian / length(vsCartesian);
     
     float3 v2 = zhat - dot(zhat, n1) * n1;
-    float3 n2 = v2 / length(v2);
+    float3 n2;
+    if (fEqual(length(v2), 0.0)) {
+        // When polar observer, n2 = 0 -> degenerate, arbitrary
+        // up direction, just pick one in the plane.
+        n2 = float3(0.0, 1.0, 0.0);
+    } else {
+        n2 = v2 / length(v2);
+    }
     
     float3 n3 = cross(n2, n1);
     
@@ -566,9 +573,12 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
     float phif = kerrLenseResult.phif;
     float thetaf = acos(kerrLenseResult.costhetaf);
     
-    // TODO: implement inclination ...
     if (mode == FULL_FOV_MODE) {
-        float phifNormalized = normalizeAngle(phif);
+        float3 rotatedSphericalCoordinates = rotateSphericalCoordinate(float3(rs, thetas, 0.0),
+                                                                       float3(ro, thetaf, phif));
+        
+        float phifNormalized = normalizeAngle(rotatedSphericalCoordinates.z);
+        thetaf = rotatedSphericalCoordinates.y;
         
         float oneTwoBdd = M_PI_F / 2.0;
         float threeFourBdd = 3.0 * M_PI_F / 2.0;
