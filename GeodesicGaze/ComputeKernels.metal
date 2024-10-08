@@ -37,13 +37,18 @@ struct ResultForSwift {
     float mathcalGphisValue;
     float psiTauValue;
     float mathcalGthetasValue;
+    float ellipticPValue;
     float IphiValue;
+    float uplus;
+    float uminus;
+    float rootOfRatio;
     int IrStatus;
     int cosThetaObserverStatus;
     int GphiStatus;
     int mathcalGphisStatus;
     int psiTauStatus;
     int mathcalGthetasStatus;
+    int ellipticPStatus;
     int IphiStatus;
 };
 
@@ -245,17 +250,19 @@ kernel void tau_compute_kernel(const device float *dummyData [[buffer(0)]],
     ResultForSwift result;
     
     float M = 1.0;
-    float a = 0.6;
-    float thetas = M_PI_F / 4.0;
+    float a = 0.1;
+    float thetas = M_PI_F / 2.0;
     float rs = 1000.0;
     float ro = rs;
-    float eta = 300.78;
-    float lambda = 13.57645;
+    float eta = 30.0;
+    float lambda = 0.0;
     
-    float r1 = -22.562675;
-    float r2 = 0.12738323;
-    float r3 = 1.8230124;
-    float r4 = 20.612282;
+    KerrRadialRootsResult rootsResult = kerrRadialRoots(a, M, eta, lambda);
+    
+    float r1 = rootsResult.roots[0].x;
+    float r2 = rootsResult.roots[1].x;
+    float r3 = rootsResult.roots[2].x;
+    float r4 = rootsResult.roots[3].x;
     
     IrResult IrResult = computeIr(a, M, ro, rs, r1, r2, r3, r4);
     result.IrStatus = IrResult.status;
@@ -267,43 +274,33 @@ kernel void tau_compute_kernel(const device float *dummyData [[buffer(0)]],
     result.cosThetaObserverValue = cosThetaObserverResult.val;
     result.cosThetaObserverStatus = cosThetaObserverResult.status;
     
-    // TODO: Resolve this error!
     // START Gphi
-    Result GphiResult = computeGphi(1, tau, a, M, thetas, eta, lambda);
-    result.GphiValue = GphiResult.val;
-    result.GphiStatus = GphiResult.status;
-    
     float deltaTheta = (1.0 / 2.0) * (1.0 - (eta + lambda * lambda) / (a * a));
     
     float uplus = deltaTheta + sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
     float uminus = deltaTheta - sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+    result.uplus = uplus;
+    result.uminus = uminus;
     
     Result mathcalGphiResult = mathcalGphi(a, thetas, uplus, uminus);
     result.mathcalGphisValue = mathcalGphiResult.val;
     result.mathcalGphisStatus = mathcalGphiResult.status;
     
-    // TODO: Resolve this error!
-    /*
-    Result psiTauResult = Psitau(a, uplus, uminus, tau, thetas, 1);
-    result.psiTauValue = psiTauResult.val;
-    result.psiTauStatus = psiTauResult.status;
-    */
-    
-    // START PSITAU
     MathcalGResult mathcalGthetasResult = mathcalGtheta(a, thetas, uplus, uminus);
     result.mathcalGthetasValue = mathcalGthetasResult.val;
     result.mathcalGthetasStatus = mathcalGthetasResult.status;
     float mathcalGthetas = mathcalGthetasResult.val;
     
-    float u = sqrt(-1.0 * uminus * a * a) * (tau + 1 * mathcalGthetas);
-    float m = uplus / uminus;
+    Result psiTauResult = Psitau(a, uplus, uminus, tau, thetas, 1);
+    result.psiTauValue = psiTauResult.val;
+    result.psiTauStatus = psiTauResult.status;
+    float psiTau = psiTauResult.val;
     
-    EllamResult amResult = jacobiam(u, m);
-    result.psiTauValue = amResult.am;
-    result.psiTauStatus = amResult.status;
+    result.rootOfRatio = sqrt(uplus / uminus);
     
-    // END PSITAU
-    
+    EllintResult ellipticPResult = ellint_P_mma(psiTau, uplus / uminus, uplus, 1e-5, 1e-5);
+    result.ellipticPValue = ellipticPResult.val;
+    result.ellipticPStatus = ellipticPResult.status;
     // END Gphi
     
     Result IphiResult = computeIphi(a, M, eta, lambda, ro, rs, r1, r2, r3, r4);

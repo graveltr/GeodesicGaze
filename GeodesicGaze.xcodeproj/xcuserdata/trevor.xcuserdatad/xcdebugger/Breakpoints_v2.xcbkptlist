@@ -14,10 +14,56 @@
             filePath = "GeodesicGazeTests/GeodesicGazeTests.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "647"
-            endingLineNumber = "647"
+            startingLineNumber = "652"
+            endingLineNumber = "652"
             landmarkName = "testJacobiAmDebug()"
             landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "AFCEDAD8-C929-4CBE-8690-491AE1699AA6"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "GeodesicGazeTests/GeodesicGazeTests.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "692"
+            endingLineNumber = "692"
+            landmarkName = "testKerr()"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "AFCEDAD8-C929-4CBE-8690-491AE1699AA6 - 8156722354e729a5"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "GeodesicGazeTests.GeodesicGazeTests.testKerr() -&gt; ()"
+                  moduleName = "GeodesicGazeTests"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/trevor/Documents/GeodesicGaze/GeodesicGazeTests/GeodesicGazeTests.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "692"
+                  endingLineNumber = "692">
+               </Location>
+               <Location
+                  uuid = "AFCEDAD8-C929-4CBE-8690-491AE1699AA6 - 8156722354e729a5"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "GeodesicGazeTests.GeodesicGazeTests.testKerr() -&gt; ()"
+                  moduleName = "GeodesicGazeTests"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/trevor/Documents/GeodesicGaze/GeodesicGazeTests/GeodesicGazeTests.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "692"
+                  endingLineNumber = "692">
+               </Location>
+            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

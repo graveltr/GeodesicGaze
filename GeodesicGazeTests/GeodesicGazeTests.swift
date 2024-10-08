@@ -47,13 +47,18 @@ struct Result {
     var mathcalGphisValue: Float
     var psiTauValue: Float
     var mathcalGthetasValue: Float
+    var ellipticPValue: Float
     var IphiValue: Float
+    var uplus: Float
+    var uminus: Float
+    var rootOfRatio: Float
     var IrStatus: Int32
     var cosThetaObserverStatus: Int32
     var GphiStatus: Int32
     var mathcalGphisStatus: Int32
     var psiTauStatus: Int32
     var mathcalGthetasStatus: Int32
+    var ellipticPStatus: Int32
     var IphiStatus: Int32
 }
 
@@ -489,10 +494,10 @@ final class GeodesicGazeTests: XCTestCase {
                                   r3: simd_float2(x: 2.7588, y: -0.914346),
                                   r4: simd_float2(x: 2.7588, y: 0.914346),
                                   status: 0),
-            KerrRadialRootsResult(r1: simd_float2(x: -5.5272, y: 0),
-                                  r2: simd_float2(x: 0.00959553, y: 0),
-                                  r3: simd_float2(x: 2.7588, y: -0.914346),
-                                  r4: simd_float2(x: 2.7588, y: 0.914346),
+            KerrRadialRootsResult(r1: simd_float2(x: -22.5627, y: 0),
+                                  r2: simd_float2(x: 0.127385, y: 0),
+                                  r3: simd_float2(x: 1.82301, y: 0),
+                                  r4: simd_float2(x: 20.6123, y: 0),
                                   status: 0)
         ]
 

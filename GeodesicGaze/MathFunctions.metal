@@ -660,6 +660,7 @@ EllintResult ellint_P(float phi, float k, float n, float errtol, float prec) {
  * The GSL's implementation differs in convention from that of Mathematica.
  * Here we provide interfaces to Mathematica's conventions.
  */
+// TODO: BUG! k is often negative. Fix please.
 EllintResult ellint_F_mma(float phi, float k, float errtol, float prec) {
     return ellint_F(phi, sqrt(k), errtol, prec);
 }

@@ -19,6 +19,7 @@ using namespace metal;
 #define SUCCESS_FRONT_TEXTURE 4
 #define OUTSIDE_FOV 1
 #define ERROR 2
+#define VORTICAL 10
 
 #define FULL_FOV_MODE 0
 #define ACTUAL_FOV_MODE 1
@@ -371,6 +372,8 @@ fragment float4 preComputedFragmentShader(VertexOut in [[stage_in]],
             return float4(0.0, 1.0, 0.0, 1.0);
         } else if (fEqual(statusCode[0], 1.0) && fEqual(statusCode[1], 1.0)) {
             return float4(0.0, 0.0, 0.0, 1.0);
+        } else if (fEqual(statusCode[0], 0.5) && fEqual(statusCode[1], 0.5)) {
+            return float4(1.0, 1.0, 0.0, 1.0);
         } else {
             return float4(0.0, 0.0, 1.0, 1.0);
         }
@@ -386,6 +389,8 @@ fragment float4 preComputedFragmentShader(VertexOut in [[stage_in]],
             return float4(0.0, 1.0, 0.0, 1.0);
         } else if (fEqual(statusCode[0], 1.0) && fEqual(statusCode[1], 1.0)) {
             return float4(0.0, 0.0, 0.0, 1.0);
+        } else if (fEqual(statusCode[0], 0.5) && fEqual(statusCode[1], 0.5)) {
+            return float4(1.0, 1.0, 0.0, 1.0);
         } else {
             return float4(0.0, 0.0, 1.0, 1.0);
         }
@@ -527,14 +532,13 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
     
     float backTextureWidth = 1920.0;
     float backTextureHeight = 1080.0;
-    float aspectRatio = backTextureWidth / backTextureHeight;
 
     /*
      * The convention we use is to call the camera screen the "source" since we
      * ray trace from this location back into the geometry.
      */
     float M = 1.0;
-    float a = 0.9;
+    float a = 0.1;
     float thetas = M_PI_F / 2.0;
     float rs = 1000.0;
     float ro = rs;
@@ -560,7 +564,7 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
 
     // We don't currently handle the case of vortical geodesics
     if (eta <= 0.0) {
-        result.status = ERROR;
+        result.status = VORTICAL;
         return result;
     }
     
@@ -654,9 +658,9 @@ kernel void precomputeLut(texture2d<float, access::write> lut [[texture(0)]],
     // This is normalizing to texture coordinate between 0 and 1
     float2 originalCoord = float2(gid) / float2(lut.get_width(), lut.get_height());
     LenseTextureCoordinateResult result = kerrLenseTextureCoordinate(originalCoord, uniforms.mode);
+    
     // Need to pass the status code within the look-up table. We do so in the
     // zw components with binary strings (00, 01, 10, 11)
-    
     if (uniforms.mode == FULL_FOV_MODE) {
         if (result.status == SUCCESS_BACK_TEXTURE) {
             lut.write(float4(result.coord, 0.0, 0.0), gid); // 00
@@ -669,6 +673,9 @@ kernel void precomputeLut(texture2d<float, access::write> lut [[texture(0)]],
         }
         if (result.status == EMITTED_FROM_BLACK_HOLE) {
             lut.write(float4(0.0, 0.0, 1.0, 1.0), gid); // 11
+        }
+        if (result.status == VORTICAL) {
+            lut.write(float4(0.0, 0.0, 0.5, 0.5), gid);
         }
     }
     
@@ -684,6 +691,9 @@ kernel void precomputeLut(texture2d<float, access::write> lut [[texture(0)]],
         }
         if (result.status == EMITTED_FROM_BLACK_HOLE) {
             lut.write(float4(0.0, 0.0, 1.0, 1.0), gid);
+        }
+        if (result.status == VORTICAL) {
+            lut.write(float4(0.0, 0.0, 0.5, 0.5), gid); // 11
         }
     }
 }
