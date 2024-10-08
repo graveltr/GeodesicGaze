@@ -492,6 +492,29 @@ float2 pixelToScreenZoomAboutCriticalCurve(float2 pixelCoords) {
     return base * float2(rtilde * cos(theta), rtilde * sin(theta));
 }
 
+
+float3 rotateSphericalCoordinate(float3 vsSpherical, float3 voSpherical) {
+    float3 vsCartesian = sphericalToCartesian(vsSpherical);
+    float3 voCartesian = sphericalToCartesian(voSpherical);
+    
+    float3 zhat = float3(0.0, 0.0, 1.0);
+
+    float3 n1 = vsCartesian / length(vsCartesian);
+    
+    float3 v2 = zhat - dot(zhat, n1) * n1;
+    float3 n2 = v2 / length(v2);
+    
+    float3 n3 = cross(n2, n1);
+    
+    // This is just matrix multiplication by the matrix
+    // whose rows are {n1, n3, n2}.
+    float3 voHatCartesian = float3(dot(n1, voCartesian),
+                                   dot(n3, voCartesian),
+                                   dot(n2, voCartesian));
+    
+    return cartesianToSpherical(voHatCartesian);
+}
+
 LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode) {
     LenseTextureCoordinateResult result;
     

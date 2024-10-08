@@ -52,6 +52,8 @@ EllintResult ellint_E_mma(float phi, float k, float errtol, float prec);
 EllintResult ellint_P_mma(float phi, float k, float n, float errtol, float prec);
 EllintResult ellint_Kcomp_mma(float k, float errtol, float prec);
 
+float3 sphericalToCartesian(float3 sphericalCoords);
+float3 cartesianToSpherical(float3 cartesianCoords);
 
 float normalizeAngle(float phi);
 

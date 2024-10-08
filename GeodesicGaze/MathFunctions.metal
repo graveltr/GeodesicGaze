@@ -691,3 +691,25 @@ float normalizeAngle(float phi) {
 bool fEqual(float x, float y) {
     return fabs(x - y) < FLT_EPSILON ? true : false;
 }
+
+float3 sphericalToCartesian(float3 sphericalCoords) {
+    float r     = sphericalCoords.x;
+    float theta = sphericalCoords.y;
+    float phi   = sphericalCoords.z;
+    
+    return float3(r * sin(theta) * cos(phi), 
+                  r * sin(theta) * sin(phi),
+                  r * cos(theta));
+}
+
+float3 cartesianToSpherical(float3 cartesianCoords) {
+    float x = cartesianCoords.x;
+    float y = cartesianCoords.y;
+    float z = cartesianCoords.z;
+    
+    float r = sqrt(x*x + y*y + z*z);
+    float theta = acos(z / r);
+    float phi = atan2(y, x);
+    
+    return float3(r, theta, phi);
+}
