@@ -301,6 +301,7 @@ Result mathcalGphi(float a, float theta, float uplus, float uminus) {
     float prefactor = -1.0 / sqrt(-1.0 * uminus * a * a);
     
     float n = uplus;
+    
     float phi = asin(cos(theta) / sqrt(uplus));
     float k = uplus / uminus;
     
@@ -370,13 +371,38 @@ Result Psitau(float a, float uplus, float uminus, float tau, float thetas, float
     return result;
 }
 
+float2 computeUplusUminus(float a, float eta, float lambda) {
+    float deltaTheta = (1.0 / 2.0) * (1.0 - (eta + lambda * lambda) / (a * a));
+    
+    float alpha = eta / (a * a);
+    float epsilon = alpha / (deltaTheta * deltaTheta);
+    
+    float uplus, uminus;
+    if (epsilon < 0.00001) {
+        float linearOrder = (sqrt(deltaTheta * deltaTheta) / 2.0) * epsilon;
+        
+        if (deltaTheta < 0.0) {
+            uplus = linearOrder;
+            uminus = deltaTheta - sqrt(deltaTheta * deltaTheta) - linearOrder;
+        } else {
+            uplus = deltaTheta + sqrt(deltaTheta * deltaTheta) + linearOrder;
+            uminus = -1.0 * linearOrder;
+        }
+    } else {
+        uplus = deltaTheta + sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+        uminus = deltaTheta - sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+    }
+    
+    return float2(uplus, uminus);
+}
+
 Result computeGphi(float nuthetas, float tau, float a, float M, float thetas, float eta, float lambda) {
     Result result;
     
-    float deltaTheta = (1.0 / 2.0) * (1.0 - (eta + lambda * lambda) / (a * a));
+    float2 uplusUminus = computeUplusUminus(a, eta, lambda);
     
-    float uplus = deltaTheta + sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
-    float uminus = deltaTheta - sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+    float uplus = uplusUminus.x;
+    float uminus = uplusUminus.y;
     
     Result mathcalGphiResult = mathcalGphi(a, thetas, uplus, uminus);
     if (mathcalGphiResult.status != SUCCESS) {

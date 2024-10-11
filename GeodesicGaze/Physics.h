@@ -74,6 +74,7 @@ struct MathcalGResult {
 float4 radialRoots(float M, float b);
 float3 computeABC(float a, float M, float eta, float lambda);
 float2 computePQ(float a, float M, float eta, float lambda);
+float2 computeUplusUminus(float a, float eta, float lambda);
 IrResult computeIr(float a, float M, float ro, float rs, float r1, float r2, float r3, float r4);
 Result computeGphi(float nuthetas, float tau, float a, float M, float thetas, float eta, float lambda);
 Result mathcalGphi(float a, float theta, float uplus, float uminus);

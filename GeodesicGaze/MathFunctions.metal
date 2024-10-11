@@ -490,15 +490,15 @@ EllintResult ellint_RJ(float x, float y, float z, float p, float errtol, float p
 }
 
 // Complete elliptic integral of the first kind, K
-EllintResult ellint_Kcomp(float k, float errtol, float prec) {
-    return ellint_RF(0.0, 1.0 - k * k, 1.0, errtol, prec);
+EllintResult ellint_Kcomp(float m, float errtol, float prec) {
+    return ellint_RF(0.0, 1.0 - m, 1.0, errtol, prec);
 }
 
 // Incomplete elliptic integral of the first kind, F
 // The convention IS NOT THE SAME AS PYTHON OR
 // MATHEMATICA. The difference is that they compute
 // F(phi, k^2).
-EllintResult ellint_F(float phi, float k, float errtol, float prec) {
+EllintResult ellint_F(float phi, float m, float errtol, float prec) {
     EllintResult result;
 
     // Angular reduction to -pi/2 < phi < pi/2
@@ -509,14 +509,14 @@ EllintResult ellint_F(float phi, float k, float errtol, float prec) {
     float sin_phi = sin(phi);
     float sin2_phi = sin_phi * sin_phi;
     float x = 1.0 - sin2_phi;
-    float y = 1.0 - k * k * sin2_phi;
+    float y = 1.0 - m * sin2_phi;
 
     EllintResult rf = ellint_RF(x, y, 1.0, errtol, prec);
     result.val = sin_phi * rf.val;
     result.err = FLT_EPSILON * fabs(result.val) + fabs(sin_phi * rf.err);
 
     if (nc != 0) {
-        EllintResult rk = ellint_Kcomp(k, errtol, prec);  // Add extra terms from periodicity
+        EllintResult rk = ellint_Kcomp(m, errtol, prec);  // Add extra terms from periodicity
         if (rk.status != SUCCESS) {
             result.status = rk.status;
             return result;
@@ -531,15 +531,15 @@ EllintResult ellint_F(float phi, float k, float errtol, float prec) {
 
 // Complete elliptic integral of the second kind, Ecomp
 // TODO: verify against gsl
-EllintResult ellint_Ecomp(float k, float errtol, float prec) {
+EllintResult ellint_Ecomp(float m, float errtol, float prec) {
     EllintResult result;
 
-    if (k * k >= 1.0) {
+    if (m >= 1.0) {
         result.status = DOMAIN_ERROR;
         return result;
-    } else if (k * k >= 1.0 - sqrt(FLT_EPSILON)) {
+    } else if (m >= 1.0 - sqrt(FLT_EPSILON)) {
         // [Abramowitz+Stegun, 17.3.36]
-        const float y = 1.0 - k * k;
+        const float y = 1.0 - m;
         const float a[] = {0.44325141463, 0.06260601220, 0.04757383546};
         const float b[] = {0.24998368310, 0.09200180037, 0.04069697526};
         const float ta = 1.0 + y * (a[0] + y * (a[1] + a[2] * y));
@@ -549,18 +549,17 @@ EllintResult ellint_Ecomp(float k, float errtol, float prec) {
         result.status = SUCCESS;
         return result;
     } else {
-        EllintResult rf = ellint_RF(0.0, 1.0 - k * k, 1.0, errtol, prec);
-        EllintResult rd = ellint_RD(0.0, 1.0 - k * k, 1.0, errtol, prec);
-        result.val = rf.val - k * k / 3.0 * rd.val;
-        result.err = rf.err + k * k / 3.0 * rd.err;
+        EllintResult rf = ellint_RF(0.0, 1.0 - m, 1.0, errtol, prec);
+        EllintResult rd = ellint_RD(0.0, 1.0 - m, 1.0, errtol, prec);
+        result.val = rf.val - m / 3.0 * rd.val;
+        result.err = rf.err + m / 3.0 * rd.err;
         result.status = ERROR_SELECT_2(rf.status, rd.status);
         return result;
     }
 }
 
 // Incomplete elliptic integral of the second kind, E
-// TODO: verify against gsl
-EllintResult ellint_E(float phi, float k, float errtol, float prec) {
+EllintResult ellint_E(float phi, float m, float errtol, float prec) {
     EllintResult result;
 
     // Angular reduction to -pi/2 < phi < pi/2
@@ -571,10 +570,10 @@ EllintResult ellint_E(float phi, float k, float errtol, float prec) {
     const float sin_phi = sin(phi);
     const float sin2_phi = sin_phi * sin_phi;
     const float x = 1.0 - sin2_phi;
-    const float y = 1.0 - k * k * sin2_phi;
+    const float y = 1.0 - m * sin2_phi;
 
     if (x < FLT_EPSILON) {
-        EllintResult re = ellint_Ecomp(k, errtol, prec);
+        EllintResult re = ellint_Ecomp(m, errtol, prec);
         result.val = 2 * nc * re.val + gsl_sign(sin_phi) * re.val;
         result.err = 2 * fabs(nc) * re.err + re.err;
         result.status = re.status;
@@ -583,17 +582,17 @@ EllintResult ellint_E(float phi, float k, float errtol, float prec) {
         EllintResult rf = ellint_RF(x, y, 1.0, errtol, prec);
         EllintResult rd = ellint_RD(x, y, 1.0, errtol, prec);
         const float sin3_phi = sin2_phi * sin_phi;
-        result.val = sin_phi * rf.val - k * k / 3.0 * sin3_phi * rd.val;
+        result.val = sin_phi * rf.val - m / 3.0 * sin3_phi * rd.val;
         result.err = FLT_EPSILON * fabs(sin_phi * rf.val);
         result.err += fabs(sin_phi * rf.err);
-        result.err += k * k / 3.0 * FLT_EPSILON * fabs(sin3_phi * rd.val);
-        result.err += k * k / 3.0 * fabs(sin3_phi * rd.err);
+        result.err += m / 3.0 * FLT_EPSILON * fabs(sin3_phi * rd.val);
+        result.err += m / 3.0 * fabs(sin3_phi * rd.err);
         int status = ERROR_SELECT_2(rf.status, rd.status);
         if (nc == 0) {
             result.status = status;
             return result;
         } else {
-            EllintResult re = ellint_Ecomp(k, errtol, prec);
+            EllintResult re = ellint_Ecomp(m, errtol, prec);
             result.val += 2 * nc * re.val;
             result.err += 2 * fabs(nc) * re.err;
             result.status = ERROR_SELECT_3(status, re.status, SUCCESS);
@@ -603,16 +602,15 @@ EllintResult ellint_E(float phi, float k, float errtol, float prec) {
 }
 
 // Complete elliptic integral of the third kind, Pcomp
-// TODO: verify against gsl
-EllintResult ellint_Pcomp(float k, float n, float errtol, float prec) {
+EllintResult ellint_Pcomp(float m, float n, float errtol, float prec) {
     EllintResult result;
 
-    if (k * k >= 1.0) {
+    if (m >= 1.0) {
         result.status = DOMAIN_ERROR;
         return result;
     } else {
-        EllintResult rf = ellint_RF(0.0, 1.0 - k * k, 1.0, errtol, prec);
-        EllintResult rj = ellint_RJ(0.0, 1.0 - k * k, 1.0, 1.0 + n, errtol, prec);
+        EllintResult rf = ellint_RF(0.0, 1.0 - m, 1.0, errtol, prec);
+        EllintResult rj = ellint_RJ(0.0, 1.0 - m, 1.0, 1.0 + n, errtol, prec);
         result.val = rf.val - (n / 3.0) * rj.val;
         result.err = rf.err + fabs(n / 3.0) * rj.err;
         result.status = ERROR_SELECT_2(rf.status, rj.status);
@@ -621,8 +619,7 @@ EllintResult ellint_Pcomp(float k, float n, float errtol, float prec) {
 }
 
 // Incomplete elliptic integral of the third kind, P
-// TODO: verify against gsl
-EllintResult ellint_P(float phi, float k, float n, float errtol, float prec) {
+EllintResult ellint_P(float phi, float m, float n, float errtol, float prec) {
     EllintResult result;
 
     // Angular reduction to -pi/2 < phi < pi/2
@@ -634,7 +631,7 @@ EllintResult ellint_P(float phi, float k, float n, float errtol, float prec) {
     const float sin2_phi = sin_phi * sin_phi;
     const float sin3_phi = sin2_phi * sin_phi;
     const float x = 1.0 - sin2_phi;
-    const float y = 1.0 - k * k * sin2_phi;
+    const float y = 1.0 - m * sin2_phi;
 
     EllintResult rf = ellint_RF(x, y, 1.0, errtol, prec);
     EllintResult rj = ellint_RJ(x, y, 1.0, 1.0 + n * sin2_phi, errtol, prec);
@@ -648,7 +645,7 @@ EllintResult ellint_P(float phi, float k, float n, float errtol, float prec) {
         result.status = status;
         return result;
     } else {
-        EllintResult rp = ellint_Pcomp(k, n, errtol, prec);
+        EllintResult rp = ellint_Pcomp(m, n, errtol, prec);
         result.val += 2 * nc * rp.val;
         result.err += 2 * fabs(nc) * rp.err;
         result.status = ERROR_SELECT_3(status, rj.status, rp.status);
@@ -661,20 +658,20 @@ EllintResult ellint_P(float phi, float k, float n, float errtol, float prec) {
  * Here we provide interfaces to Mathematica's conventions.
  */
 // TODO: BUG! k is often negative. Fix please.
-EllintResult ellint_F_mma(float phi, float k, float errtol, float prec) {
-    return ellint_F(phi, sqrt(k), errtol, prec);
+EllintResult ellint_F_mma(float phi, float m, float errtol, float prec) {
+    return ellint_F(phi, m, errtol, prec);
 }
 
-EllintResult ellint_E_mma(float phi, float k, float errtol, float prec) {
-    return ellint_E(phi, sqrt(k), errtol, prec);
+EllintResult ellint_E_mma(float phi, float m, float errtol, float prec) {
+    return ellint_E(phi, m, errtol, prec);
 }
 
-EllintResult ellint_P_mma(float phi, float k, float n, float errtol, float prec) {
-    return ellint_P(phi, sqrt(k), -1.0 * n, errtol, prec);
+EllintResult ellint_P_mma(float phi, float m, float n, float errtol, float prec) {
+    return ellint_P(phi, m, -1.0 * n, errtol, prec);
 }
 
-EllintResult ellint_Kcomp_mma(float k, float errtol, float prec) {
-    return ellint_Kcomp(sqrt(k), errtol, prec);
+EllintResult ellint_Kcomp_mma(float m, float errtol, float prec) {
+    return ellint_Kcomp(m, errtol, prec);
 }
 
 float normalizeAngle(float phi) {

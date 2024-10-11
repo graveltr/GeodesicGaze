@@ -52,6 +52,15 @@ struct Result {
     var uplus: Float
     var uminus: Float
     var rootOfRatio: Float
+    var deltaTheta: Float
+    var t1: Float
+    var t2: Float
+    var sum: Float
+    var sqrt1: Float
+    var sqrt2: Float
+    var uplusApprox: Float
+    var epsilon: Float
+    var ifInput: Bool
     var IrStatus: Int32
     var cosThetaObserverStatus: Int32
     var GphiStatus: Int32
@@ -60,6 +69,7 @@ struct Result {
     var mathcalGthetasStatus: Int32
     var ellipticPStatus: Int32
     var IphiStatus: Int32
+    var rootsResultStatus: Int32
 }
 
 struct JacobiAmDebugResult {
@@ -287,6 +297,53 @@ final class GeodesicGazeTests: XCTestCase {
         let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
         
         let expectedResults = readExpectedResults(filename: "expected_ellipticp_results")
+
+        for i in 0..<gpuResults.count {
+            let gpuResult = gpuResults[i]
+            let expectedResult = expectedResults[i]
+            XCTAssertEqual(gpuResult.val, expectedResult.val, accuracy: 1e-3, "Value mismatch at index \(i)")
+            XCTAssertEqual(gpuResult.status, expectedResult.status, "Non SUCCESSful status code at index \(i)")
+        }
+    }
+    
+    func testEllintPMMAInBounds() {
+        let testAngles: [Float] = [
+            0.5,            // Mid-range angle
+            1.0,            // Larger angle
+            Float.pi / 4   // π/4 (45 degrees)
+        ]
+
+        let testModuli: [Float] = [
+           -0.4,    // Lower boundary (no elliptic effect)
+            0.0,    // Lower boundary (no elliptic effect)
+            0.3
+        ]
+        
+        let testN: [Float] = [
+            0.0,
+            0.5,
+            0.9,
+        ]
+
+        let wrappedTestAngles = AnyBufferData(testAngles)
+        let wrappedTestModuli = AnyBufferData(testModuli)
+        let wrappedTestN = AnyBufferData(testN)
+        let inputs: [AnyBufferData] = [wrappedTestAngles, wrappedTestModuli, wrappedTestN]
+        
+        let count = testAngles.count
+        let resultBufferSize = count * MemoryLayout<EllintResult>.size
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "ellint_P_mma_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: EllintResult.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        
+        let expectedResults: [EllintResult] = [
+            EllintResult(val: 0.492389, err: 0, status: 0),
+            EllintResult(val: 1.17882, err: 0, status: 0),
+            EllintResult(val: 1.00158, err: 0, status: 0)
+        ]
 
         for i in 0..<gpuResults.count {
             let gpuResult = gpuResults[i]

@@ -86,7 +86,21 @@ class BhiMixer {
         var uniforms = PreComputeUniforms(mode: mode)
         let uniformsBuffer = device.makeBuffer(bytes: &uniforms, length: MemoryLayout<PreComputeUniforms>.size, options: .storageModeShared)
         
+        var matrixWidth = lutTexture.width;
+        let matrixHeight = lutTexture.height;
+        
+        let totalElements = matrixWidth * matrixHeight;
+        
+        let bufferSize = totalElements * MemoryLayout<simd_float3>.stride;
+        guard let matrixBuffer = device.makeBuffer(length: bufferSize, options: .storageModeShared) else {
+            fatalError("Couldn't create buffer")
+        }
+        
+        let widthBuffer = device.makeBuffer(bytes: &matrixWidth, length: MemoryLayout<UInt>.size, options: .storageModeShared)
+        
         computeEncoder.setBuffer(uniformsBuffer, offset: 0, index: 0)
+        computeEncoder.setBuffer(matrixBuffer, offset: 0, index: 1)
+        computeEncoder.setBuffer(widthBuffer, offset: 0, index: 2)
         computeEncoder.setTexture(lutTexture, index: 0)
         
         /*
@@ -104,6 +118,19 @@ class BhiMixer {
         
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()
+        
+        let dataPointer = matrixBuffer.contents().bindMemory(to: simd_float3.self, capacity: totalElements)
+        let matrixData = Array(UnsafeBufferPointer(start: dataPointer, count: totalElements))
+        
+        var matrixResult: [[simd_float3]] = Array(repeating: Array(repeating: simd_float3(0,0,0), count: matrixWidth), count: matrixHeight);
+        
+        for y in 0..<matrixHeight {
+            for x in 0..<matrixWidth {
+                matrixResult[y][x] = matrixData[y * matrixWidth + x]
+            }
+        }
+        
+        let a = matrixResult[0][0]
     }
     
     func mix(frontCameraPixelBuffer: CVPixelBuffer?,

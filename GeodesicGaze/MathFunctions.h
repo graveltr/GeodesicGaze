@@ -43,14 +43,14 @@ ElljacResult ellipj(float u, float m);
 EllamResult jacobiam(float u, float m);
 EllamResult jacobiamShifted(float u, float m, float ellipticKofm, float yShift);
 
-EllintResult ellint_F(float phi, float k, float errtol, float prec);
-EllintResult ellint_E(float phi, float k, float errtol, float prec);
-EllintResult ellint_P(float phi, float k, float n, float errtol, float prec);
+EllintResult ellint_F(float phi, float m, float errtol, float prec);
+EllintResult ellint_E(float phi, float m, float errtol, float prec);
+EllintResult ellint_P(float phi, float m, float n, float errtol, float prec);
 
-EllintResult ellint_F_mma(float phi, float k, float errtol, float prec);
-EllintResult ellint_E_mma(float phi, float k, float errtol, float prec);
-EllintResult ellint_P_mma(float phi, float k, float n, float errtol, float prec);
-EllintResult ellint_Kcomp_mma(float k, float errtol, float prec);
+EllintResult ellint_F_mma(float phi, float m, float errtol, float prec);
+EllintResult ellint_E_mma(float phi, float m, float errtol, float prec);
+EllintResult ellint_P_mma(float phi, float m, float n, float errtol, float prec);
+EllintResult ellint_Kcomp_mma(float m, float errtol, float prec);
 
 float3 sphericalToCartesian(float3 sphericalCoords);
 float3 cartesianToSpherical(float3 cartesianCoords);

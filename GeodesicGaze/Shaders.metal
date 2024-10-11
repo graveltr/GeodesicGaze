@@ -334,6 +334,11 @@ fragment float4 preComputedFragmentShader(VertexOut in [[stage_in]],
                                           texture2d<float, access::sample> lutTexture [[texture(4)]],
                                           constant Uniforms &uniforms [[buffer(0)]]) {
     constexpr sampler s(coord::normalized, address::clamp_to_edge, filter::linear);
+    
+    if (0.897 < in.texCoord.x && in.texCoord.x < 0.9
+        && 0.897 < in.texCoord.y && in.texCoord.y < 0.9) {
+        return float4(1.0, 0.0, 0.0, 1.0);
+    }
 
     float2 backPipOrigin = float2(0.05, 0.7);
     float2 frontPipOrigin = float2(0.05, 0.05);
@@ -538,7 +543,7 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
      * ray trace from this location back into the geometry.
      */
     float M = 1.0;
-    float a = 0.1;
+    float a = 0.001;
     float thetas = M_PI_F / 2.0;
     float rs = 1000.0;
     float ro = rs;
@@ -654,28 +659,37 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
  */
 kernel void precomputeLut(texture2d<float, access::write> lut [[texture(0)]],
                           constant PreComputeUniforms &uniforms [[buffer(0)]],
+                          device float3* matrix [[buffer(1)]],
+                          constant uint& width [[buffer(2)]],
                           uint2 gid [[thread_position_in_grid]]) {
     // This is normalizing to texture coordinate between 0 and 1
     float2 originalCoord = float2(gid) / float2(lut.get_width(), lut.get_height());
     LenseTextureCoordinateResult result = kerrLenseTextureCoordinate(originalCoord, uniforms.mode);
+    
+    uint linearIndex = gid.y * width + gid.x;
     
     // Need to pass the status code within the look-up table. We do so in the
     // zw components with binary strings (00, 01, 10, 11)
     if (uniforms.mode == FULL_FOV_MODE) {
         if (result.status == SUCCESS_BACK_TEXTURE) {
             lut.write(float4(result.coord, 0.0, 0.0), gid); // 00
+            matrix[linearIndex] = float3(originalCoord, 0);
         }
         if (result.status == SUCCESS_FRONT_TEXTURE) {
             lut.write(float4(result.coord, 0.0, 1.0), gid); // 01
+            matrix[linearIndex] = float3(originalCoord, 0);
         }
         if (result.status == ERROR) {
             lut.write(float4(0.0, 0.0, 1.0, 0.0), gid); // 10
+            matrix[linearIndex] = float3(originalCoord, -1);
         }
         if (result.status == EMITTED_FROM_BLACK_HOLE) {
             lut.write(float4(0.0, 0.0, 1.0, 1.0), gid); // 11
+            matrix[linearIndex] = float3(originalCoord, -1);
         }
         if (result.status == VORTICAL) {
             lut.write(float4(0.0, 0.0, 0.5, 0.5), gid);
+            matrix[linearIndex] = float3(originalCoord, -1);
         }
     }
     

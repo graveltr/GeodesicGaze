@@ -42,6 +42,15 @@ struct ResultForSwift {
     float uplus;
     float uminus;
     float rootOfRatio;
+    float deltaTheta;
+    float t1;
+    float t2;
+    float sum;
+    float sqrt1;
+    float sqrt2;
+    float uplusApprox;
+    float epsilon;
+    bool ifInput;
     int IrStatus;
     int cosThetaObserverStatus;
     int GphiStatus;
@@ -50,6 +59,7 @@ struct ResultForSwift {
     int mathcalGthetasStatus;
     int ellipticPStatus;
     int IphiStatus;
+    int rootsResultStatus;
 };
 
 struct JacobiAmResultForSwift {
@@ -81,6 +91,14 @@ kernel void ellint_P_compute_kernel(const device float *angles [[buffer(0)]],
                                     device EllintResult *results [[buffer(3)]],
                                     uint id [[thread_position_in_grid]]) {
     results[id] = ellint_P(angles[id], sqrt(moduli[id]), -1 * n[id], 1e-5, 1e-5);
+}
+
+kernel void ellint_P_mma_compute_kernel(const device float *angles [[buffer(0)]],
+                                        const device float *moduli [[buffer(1)]],
+                                        const device float *n [[buffer(2)]],
+                                        device EllintResult *results [[buffer(3)]],
+                                        uint id [[thread_position_in_grid]]) {
+    results[id] = ellint_P_mma(angles[id], moduli[id], n[id], 1e-5, 1e-5);
 }
 
 kernel void radial_roots_compute_kernel(const device float *M [[buffer(0)]],
@@ -244,19 +262,182 @@ kernel void kerr_lense_compute_kernel(const device float *dummyData [[buffer(0)]
     results[id] = result;
 }
 
+float forced_sum(float a, float b) {
+    return a + b;
+}
+
+float2 pixelToScreenP(float2 pixelCoords) {
+    float base = 0.04;
+    float rcrit = 300.0;
+    float alpha = 1000.0;
+    int n = 1;
+    
+    float r = sqrt(pixelCoords.x * pixelCoords.x + pixelCoords.y * pixelCoords.y);
+    
+    if (r < rcrit) {
+        return base * pixelCoords;
+    }
+    
+    return ((1.0 / alpha) * pow(r - rcrit, n) + base) * pixelCoords;
+}
+
+struct LenseTextureCoordinateResultP {
+    float2 coord;
+    int status;
+};
+
+float3 rotateSphericalCoordinateP(float3 vsSpherical, float3 voSpherical) {
+    float3 vsCartesian = sphericalToCartesian(vsSpherical);
+    float3 voCartesian = sphericalToCartesian(voSpherical);
+    
+    float3 zhat = float3(0.0, 0.0, 1.0);
+
+    float3 n1 = vsCartesian / length(vsCartesian);
+    
+    float3 v2 = zhat - dot(zhat, n1) * n1;
+    float3 n2;
+    if (fEqual(length(v2), 0.0)) {
+        // When polar observer, n2 = 0 -> degenerate, arbitrary
+        // up direction, just pick one in the plane.
+        n2 = float3(0.0, 1.0, 0.0);
+    } else {
+        n2 = v2 / length(v2);
+    }
+    
+    float3 n3 = cross(n2, n1);
+    
+    // This is just matrix multiplication by the matrix
+    // whose rows are {n1, n3, n2}.
+    float3 voHatCartesian = float3(dot(n1, voCartesian),
+                                   dot(n3, voCartesian),
+                                   dot(n2, voCartesian));
+    
+    return cartesianToSpherical(voHatCartesian);
+}
+
+LenseTextureCoordinateResultP kerrLenseTextureCoordinateP(float2 inCoord, int mode) {
+    LenseTextureCoordinateResultP result;
+    
+    float backTextureWidth = 1920.0;
+    float backTextureHeight = 1080.0;
+
+    /*
+     * The convention we use is to call the camera screen the "source" since we
+     * ray trace from this location back into the geometry.
+     */
+    float M = 1.0;
+    float a = 0.001;
+    float thetas = M_PI_F / 2.0;
+    float rs = 1000.0;
+    float ro = rs;
+    
+    // Calculate the pixel coordinates of the current fragment
+    float2 pixelCoords = inCoord * float2(backTextureWidth, backTextureHeight);
+    
+    // Calculate the pixel coordinates of the center of the image
+    float2 center = float2(backTextureWidth / 2.0, backTextureHeight / 2.0);
+    
+    // Place the center at the origin
+    float2 relativePixelCoords = pixelCoords - center;
+    
+    // Convert the pixel coordinates to coordinates in the image plane (alpha, beta)
+    float2 imagePlaneCoords = pixelToScreenP(relativePixelCoords);
+    float alpha = imagePlaneCoords.x;
+    float beta = imagePlaneCoords.y;
+
+    // Convert (alpha, beta) -> (lambda, eta)
+    float lambda = -1.0 * alpha * sin(thetas);
+    float eta = (alpha * alpha - a * a) * cos(thetas) * cos(thetas) + beta * beta;
+    float nuthetas = sign(beta);
+
+    // We don't currently handle the case of vortical geodesics
+    if (eta <= 0.0) {
+        result.status = -50;
+        return result;
+    }
+    
+    // Do the actual lensing. The result is a final theta and phi.
+    KerrLenseResult kerrLenseResult = kerrLense(a, M, thetas, nuthetas, ro, rs, eta, lambda);
+    if (kerrLenseResult.status != SUCCESS) {
+        result.status = -100;
+        return result;
+    }
+    float phif = kerrLenseResult.phif;
+    float thetaf = acos(kerrLenseResult.costhetaf);
+    
+    float3 rotatedSphericalCoordinates = rotateSphericalCoordinateP(float3(rs, thetas, 0.0),
+                                                                   float3(ro, thetaf, phif));
+    
+    float phifNormalized = normalizeAngle(rotatedSphericalCoordinates.z);
+    thetaf = rotatedSphericalCoordinates.y;
+    
+    float oneTwoBdd = M_PI_F / 2.0;
+    float threeFourBdd = 3.0 * M_PI_F / 2.0;
+    
+    float v = thetaf / M_PI_F;
+    float u = 0.0;
+    
+    // If in quadrant I
+    if (0.0 <= phifNormalized && phifNormalized <= oneTwoBdd) {
+        u = 0.5 + 0.5 * (phifNormalized / oneTwoBdd);
+        result.status = 5;
+    } else if (threeFourBdd <= phifNormalized && phifNormalized <= 2.0 * M_PI_F) { // quadrant IV
+        u = 0.5 * ((phifNormalized - threeFourBdd) / (2.0 * M_PI_F - threeFourBdd));
+        result.status = 5;
+    } else { // II or III
+        u = (phifNormalized - oneTwoBdd) / (threeFourBdd - oneTwoBdd);
+        result.status = 5;
+    }
+    float2 transformedTexCoord = float2(u, v);
+    
+    result.coord = transformedTexCoord;
+    return result;
+}
+
 kernel void tau_compute_kernel(const device float *dummyData [[buffer(0)]],
                                device ResultForSwift *results [[buffer(1)]],
                                uint id [[thread_position_in_grid]]) {
     ResultForSwift result;
     
+    float backTextureWidth = 1920.0;
+    float backTextureHeight = 1080.0;
+    
+    float2 inCoord = float2(0.0132850241, 0);
+    LenseTextureCoordinateResultP lenseResult = kerrLenseTextureCoordinateP(inCoord, 0);
+    result.IrStatus = lenseResult.status;
+
+    /*
+     * The convention we use is to call the camera screen the "source" since we
+     * ray trace from this location back into the geometry.
+     */
     float M = 1.0;
-    float a = 0.1;
+    float a = 0.001;
     float thetas = M_PI_F / 2.0;
     float rs = 1000.0;
     float ro = rs;
-    float eta = 30.0;
-    float lambda = 0.0;
     
+    // Calculate the pixel coordinates of the current fragment
+    float2 pixelCoords = inCoord * float2(backTextureWidth, backTextureHeight);
+    
+    // Calculate the pixel coordinates of the center of the image
+    float2 center = float2(backTextureWidth / 2.0, backTextureHeight / 2.0);
+    
+    // Place the center at the origin
+    float2 relativePixelCoords = pixelCoords - center;
+    
+    // Convert the pixel coordinates to coordinates in the image plane (alpha, beta)
+    float2 imagePlaneCoords = pixelToScreenP(relativePixelCoords);
+    float alpha = imagePlaneCoords.x;
+    float beta = imagePlaneCoords.y;
+
+    // Convert (alpha, beta) -> (lambda, eta)
+    float lambda = -1.0 * alpha * sin(thetas);
+    float eta = (alpha * alpha - a * a) * cos(thetas) * cos(thetas) + beta * beta;
+    float nuthetas = sign(beta);
+
+    // float eta = 1212.96;
+    // float lambda = -208.0;
+
     KerrRadialRootsResult rootsResult = kerrRadialRoots(a, M, eta, lambda);
     
     float r1 = rootsResult.roots[0].x;
@@ -264,23 +445,44 @@ kernel void tau_compute_kernel(const device float *dummyData [[buffer(0)]],
     float r3 = rootsResult.roots[2].x;
     float r4 = rootsResult.roots[3].x;
     
+    result.rootsResultStatus = rootsResult.status;
+    
     IrResult IrResult = computeIr(a, M, ro, rs, r1, r2, r3, r4);
-    result.IrStatus = IrResult.status;
+    // result.IrStatus = IrResult.status;
     result.IrValue = IrResult.val;
     
     float tau = IrResult.val;
     
-    CosThetaObserverResult cosThetaObserverResult = cosThetaObserver(1, tau, a, M, thetas, eta, lambda);
+    CosThetaObserverResult cosThetaObserverResult = cosThetaObserver(thetas, tau, a, M, thetas, eta, lambda);
     result.cosThetaObserverValue = cosThetaObserverResult.val;
     result.cosThetaObserverStatus = cosThetaObserverResult.status;
     
     // START Gphi
+    /*
     float deltaTheta = (1.0 / 2.0) * (1.0 - (eta + lambda * lambda) / (a * a));
+    result.deltaTheta = deltaTheta;
     
-    float uplus = deltaTheta + sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
-    float uminus = deltaTheta - sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+    float alpha = eta / (a * a);
+    float epsilon = alpha / (deltaTheta * deltaTheta);
+    
+    float uplus, uminus;
+    if (epsilon < 0.00001) {
+        float linearOrder = (sqrt(deltaTheta * deltaTheta) / 2.0) * epsilon;
+        
+        uplus = deltaTheta + sqrt(deltaTheta * deltaTheta) + linearOrder;
+        uminus = deltaTheta - sqrt(deltaTheta * deltaTheta) - linearOrder;
+        result.t1 = linearOrder;
+        result.ifInput = true;
+    } else {
+        uplus = deltaTheta + sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+        uminus = deltaTheta - sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+        
+        result.ifInput = false;
+    }
+
     result.uplus = uplus;
     result.uminus = uminus;
+    result.epsilon = epsilon;
     
     Result mathcalGphiResult = mathcalGphi(a, thetas, uplus, uminus);
     result.mathcalGphisValue = mathcalGphiResult.val;
@@ -296,12 +498,70 @@ kernel void tau_compute_kernel(const device float *dummyData [[buffer(0)]],
     result.psiTauStatus = psiTauResult.status;
     float psiTau = psiTauResult.val;
     
-    result.rootOfRatio = sqrt(uplus / uminus);
+    result.rootOfRatio = uplus / uminus;
     
     EllintResult ellipticPResult = ellint_P_mma(psiTau, uplus / uminus, uplus, 1e-5, 1e-5);
     result.ellipticPValue = ellipticPResult.val;
     result.ellipticPStatus = ellipticPResult.status;
+    */
     // END Gphi
+    
+    // Result GphiResult = computeGphi(1, tau, a, M, thetas, eta, lambda);
+    // result.GphiValue = (1.0 / sqrt(-1.0 * uminus * a * a)) * ellipticPResult.val - 1.0 * mathcalGphiResult.val;
+    // result.GphiValue = GphiResult.val;
+    // result.GphiStatus = GphiResult.status;
+    
+    /*
+    float2 uplusUminus = computeUplusUminus(a, eta, lambda);
+    
+    float uplus = uplusUminus.x;
+    float uminus = uplusUminus.y;
+    */
+    
+    float deltaTheta = (1.0 / 2.0) * (1.0 - (eta + lambda * lambda) / (a * a));
+    
+    float alphap = eta / (a * a);
+    float epsilon = alphap / (deltaTheta * deltaTheta);
+    result.epsilon = epsilon;
+    
+    float uplus = 4.0;
+    float uminus = 0.0;
+    if (epsilon < 0.00001) {
+        float linearOrder = (sqrt(deltaTheta * deltaTheta) / 2.0) * epsilon;
+        
+        // uplus = (deltaTheta + sqrt(deltaTheta * deltaTheta)) + linearOrder;
+        if (deltaTheta < 0.0) {
+            uplus = linearOrder;
+            uminus = deltaTheta - sqrt(deltaTheta * deltaTheta) - linearOrder;
+        } else {
+            uplus = deltaTheta + sqrt(deltaTheta * deltaTheta) + linearOrder;
+            uminus = -1.0 * linearOrder;
+        }
+    } else {
+        uplus = deltaTheta + sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+        uminus = deltaTheta - sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+    }
+
+    result.uplus = uplus;
+    result.uminus = uminus;
+    
+    Result mathcalGphiResult = mathcalGphi(a, thetas, uplus, uminus);
+    float mathcalGphis = mathcalGphiResult.val;
+    result.mathcalGphisValue = mathcalGphis;
+    result.mathcalGphisStatus = mathcalGphiResult.status;
+    
+    Result psiTauResult = Psitau(a, uplus, uminus, tau, thetas, nuthetas);
+    float psiTau = psiTauResult.val;
+    result.psiTauValue = psiTau;
+    result.psiTauStatus = psiTauResult.status;
+    
+    EllintResult ellipticPResult = ellint_P_mma(psiTau, uplus / uminus, uplus, 1e-5, 1e-5);
+    result.ellipticPValue = ellipticPResult.val;
+    result.ellipticPStatus = ellipticPResult.status;
+    
+    Result GphiResult = computeGphi(nuthetas, tau, a, M, thetas, eta, lambda);
+    result.GphiValue = GphiResult.val;
+    result.GphiStatus = GphiResult.status;
     
     Result IphiResult = computeIphi(a, M, eta, lambda, ro, rs, r1, r2, r3, r4);
     float Iphi = IphiResult.val;
