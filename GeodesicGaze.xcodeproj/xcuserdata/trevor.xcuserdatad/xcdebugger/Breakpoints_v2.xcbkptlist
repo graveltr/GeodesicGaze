@@ -30,13 +30,13 @@
             filePath = "GeodesicGazeTests/GeodesicGazeTests.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "749"
-            endingLineNumber = "749"
+            startingLineNumber = "768"
+            endingLineNumber = "768"
             landmarkName = "testKerr()"
             landmarkType = "7">
             <Locations>
                <Location
-                  uuid = "0A1D9871-79A8-4649-A763-A253F16F66E5 - 8156722354e7217c"
+                  uuid = "0A1D9871-79A8-4649-A763-A253F16F66E5 - 8156722354e727e9"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
@@ -46,11 +46,11 @@
                   urlString = "file:///Users/trevor/Documents/GeodesicGaze/GeodesicGazeTests/GeodesicGazeTests.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "749"
-                  endingLineNumber = "749">
+                  startingLineNumber = "768"
+                  endingLineNumber = "768">
                </Location>
                <Location
-                  uuid = "0A1D9871-79A8-4649-A763-A253F16F66E5 - 8156722354e7217c"
+                  uuid = "0A1D9871-79A8-4649-A763-A253F16F66E5 - 8156722354e727e9"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
@@ -60,8 +60,8 @@
                   urlString = "file:///Users/trevor/Documents/GeodesicGaze/GeodesicGazeTests/GeodesicGazeTests.swift"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "749"
-                  endingLineNumber = "749">
+                  startingLineNumber = "768"
+                  endingLineNumber = "768">
                </Location>
             </Locations>
          </BreakpointContent>

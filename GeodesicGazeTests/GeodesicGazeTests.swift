@@ -732,6 +732,25 @@ final class GeodesicGazeTests: XCTestCase {
         }
     }
     
+    func testKerrOther() {
+        let dummyData: [Float] = [1.0]
+
+        let wrappedDummyData = AnyBufferData(dummyData)
+        let inputs: [AnyBufferData] = [wrappedDummyData]
+        
+        let count = dummyData.count
+        let resultBufferSize = count * MemoryLayout<PhiSResult>.size;
+        let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
+
+        runComputeShader(shaderName: "other_crasher_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        
+        let resultsPointer = resultsBuffer?.contents().bindMemory(to: PhiSResult.self, capacity: count)
+        let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))
+        for i in 0..<gpuResults.count {
+            print(gpuResults[i])
+        }
+    }
+
     func testKerr() {
         let dummyData: [Float] = [1.0]
 
@@ -742,7 +761,7 @@ final class GeodesicGazeTests: XCTestCase {
         let resultBufferSize = count * MemoryLayout<Result>.size;
         let resultsBuffer = device.makeBuffer(length: resultBufferSize, options: [])
 
-        runComputeShader(shaderName: "tau_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
+        runComputeShader(shaderName: "crasher_compute_kernel", inputs: inputs, resultsBuffer: resultsBuffer!)
         
         let resultsPointer = resultsBuffer?.contents().bindMemory(to: Result.self, capacity: count)
         let gpuResults = Array(UnsafeBufferPointer(start: resultsPointer, count: count))

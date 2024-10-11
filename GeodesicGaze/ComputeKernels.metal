@@ -62,6 +62,11 @@ struct ResultForSwift {
     int rootsResultStatus;
 };
 
+struct CosThetaResultForSwift {
+    float value;
+    int status;
+};
+
 struct JacobiAmResultForSwift {
     float ellipticKofmValue;
     float yShiftValue;
@@ -392,6 +397,201 @@ LenseTextureCoordinateResultP kerrLenseTextureCoordinateP(float2 inCoord, int mo
     
     result.coord = transformedTexCoord;
     return result;
+}
+
+kernel void crasher_compute_kernel(const device float *dummyData [[buffer(0)]],
+                                   device ResultForSwift *results [[buffer(1)]],
+                                   uint id [[thread_position_in_grid]]) {
+    ResultForSwift result;
+    
+    float backTextureWidth = 1920.0;
+    float backTextureHeight = 1080.0;
+    
+    float2 inCoord = float2(0.0132850241, 0);
+    LenseTextureCoordinateResultP lenseResult = kerrLenseTextureCoordinateP(inCoord, 0);
+    result.GphiStatus = lenseResult.status;
+    
+    /*
+     * The convention we use is to call the camera screen the "source" since we
+     * ray trace from this location back into the geometry.
+     */
+    float M = 1.0;
+    float a = 0.001;
+    float thetas = M_PI_F / 2.0;
+    float rs = 1000.0;
+    float ro = rs;
+    
+    // Calculate the pixel coordinates of the current fragment
+    float2 pixelCoords = inCoord * float2(backTextureWidth, backTextureHeight);
+    
+    // Calculate the pixel coordinates of the center of the image
+    float2 center = float2(backTextureWidth / 2.0, backTextureHeight / 2.0);
+    
+    // Place the center at the origin
+    float2 relativePixelCoords = pixelCoords - center;
+    
+    // Convert the pixel coordinates to coordinates in the image plane (alpha, beta)
+    float2 imagePlaneCoords = pixelToScreenP(relativePixelCoords);
+    float alpha = imagePlaneCoords.x;
+    float beta = imagePlaneCoords.y;
+
+    // Convert (alpha, beta) -> (lambda, eta)
+    float lambda = -1.0 * alpha * sin(thetas);
+    float eta = (alpha * alpha - a * a) * cos(thetas) * cos(thetas) + beta * beta;
+    float nuthetas = sign(beta);
+
+    // We don't currently handle the case of vortical geodesics
+    if (eta <= 0.0) { }
+    
+    KerrRadialRootsResult rootsResult = kerrRadialRoots(a, M, eta, lambda);
+    result.rootsResultStatus = rootsResult.status;
+    
+    float2 roots[4];
+    roots[0] = rootsResult.roots[0];
+    roots[1] = rootsResult.roots[1];
+    roots[2] = rootsResult.roots[2];
+    roots[3] = rootsResult.roots[3];
+    
+    result.IphiStatus = 1111;
+    
+    // If not in case (2), then black hole emission.
+    if (!(isReal(roots[0]) &&
+          isReal(roots[1]) &&
+          isReal(roots[2]) &&
+          isReal(roots[3]))) {
+        result.IphiStatus = -1000;
+        result.ifInput = true;
+    } else {
+        result.ifInput = false;
+    }
+    
+    /*
+    result.IrValue = roots[0].x;
+    result.cosThetaObserverValue = roots[0].y;
+    result.GphiValue = roots[1].x;
+    result.mathcalGphisValue = roots[1].y;
+    result.psiTauValue = roots[2].x;
+    result.mathcalGthetasValue = roots[2].y;
+    result.ellipticPValue = roots[3].x;
+    result.IphiValue = roots[3].y;
+    */
+    
+    float r1 = roots[0].x;
+    float r2 = roots[1].x;
+    float r3 = roots[2].x;
+    float r4 = roots[3].x;
+
+    float rplus = M + sqrt(M * M - a * a);
+    if (r4 < rplus) {
+        result.IphiStatus = -100;
+    }
+    
+    IrResult IrResult = computeIr(a, M, ro, rs, r1, r2, r3, r4);
+    float Ir = IrResult.val;
+    float tau = Ir;
+    result.IrValue = Ir;
+    result.IrStatus = IrResult.status;
+    
+    CosThetaObserverResult cosThetaObserverResult = cosThetaObserver(nuthetas, tau, a, M, thetas, eta, lambda);
+    float cosThetaObserver = cosThetaObserverResult.val;
+    result.cosThetaObserverValue = cosThetaObserver;
+    result.cosThetaObserverStatus = cosThetaObserverResult.status;
+    
+    Result GphiResult = computeGphi(nuthetas, tau, a, M, thetas, eta, lambda);
+    float Gphi = GphiResult.val;
+    result.GphiValue = Gphi;
+    result.GphiStatus = GphiResult.status;
+
+    results[id] = result;
+}
+
+kernel void other_crasher_compute_kernel(const device float *dummyData [[buffer(0)]],
+                                   device CosThetaResultForSwift *results [[buffer(1)]],
+                                   uint id [[thread_position_in_grid]]) {
+    CosThetaResultForSwift result;
+    
+    float backTextureWidth = 1920.0;
+    float backTextureHeight = 1080.0;
+    
+    float2 inCoord = float2(0.0132850241, 0);
+    LenseTextureCoordinateResultP lenseResult = kerrLenseTextureCoordinateP(inCoord, 0);
+    
+    /*
+     * The convention we use is to call the camera screen the "source" since we
+     * ray trace from this location back into the geometry.
+     */
+    float M = 1.0;
+    float a = 0.001;
+    float thetas = M_PI_F / 2.0;
+    float rs = 1000.0;
+    float ro = rs;
+    
+    // Calculate the pixel coordinates of the current fragment
+    float2 pixelCoords = inCoord * float2(backTextureWidth, backTextureHeight);
+    
+    // Calculate the pixel coordinates of the center of the image
+    float2 center = float2(backTextureWidth / 2.0, backTextureHeight / 2.0);
+    
+    // Place the center at the origin
+    float2 relativePixelCoords = pixelCoords - center;
+    
+    // Convert the pixel coordinates to coordinates in the image plane (alpha, beta)
+    float2 imagePlaneCoords = pixelToScreenP(relativePixelCoords);
+    float alpha = imagePlaneCoords.x;
+    float beta = imagePlaneCoords.y;
+
+    // Convert (alpha, beta) -> (lambda, eta)
+    float lambda = -1.0 * alpha * sin(thetas);
+    float eta = (alpha * alpha - a * a) * cos(thetas) * cos(thetas) + beta * beta;
+    float nuthetas = sign(beta);
+
+    // We don't currently handle the case of vortical geodesics
+    if (eta <= 0.0) { }
+    
+    KerrRadialRootsResult rootsResult = kerrRadialRoots(a, M, eta, lambda);
+    
+    float2 roots[4];
+    roots[0] = rootsResult.roots[0];
+    roots[1] = rootsResult.roots[1];
+    roots[2] = rootsResult.roots[2];
+    roots[3] = rootsResult.roots[3];
+    
+    
+    // If not in case (2), then black hole emission.
+    if (!(isReal(roots[0]) &&
+          isReal(roots[1]) &&
+          isReal(roots[2]) &&
+          isReal(roots[3]))) {
+    } else {
+    }
+    
+    
+    float r1 = roots[0].x;
+    float r2 = roots[1].x;
+    float r3 = roots[2].x;
+    float r4 = roots[3].x;
+
+    float rplus = M + sqrt(M * M - a * a);
+    if (r4 < rplus) {
+    }
+    
+    IrResult IrResult = computeIr(a, M, ro, rs, r1, r2, r3, r4);
+    float Ir = IrResult.val;
+    float tau = Ir;
+    
+    CosThetaObserverResult cosThetaObserverResult = cosThetaObserver(nuthetas, tau, a, M, thetas, eta, lambda);
+    float cosThetaObserver = cosThetaObserverResult.val;
+    result.value = cosThetaObserver;
+    result.status = cosThetaObserverResult.status;
+    
+    /*
+    Result GphiResult = computeGphi(nuthetas, tau, a, M, thetas, eta, lambda);
+    float Gphi = GphiResult.val;
+    result.GphiValue = Gphi;
+    result.GphiStatus = GphiResult.status;
+     */
+
+    results[id] = result;
 }
 
 kernel void tau_compute_kernel(const device float *dummyData [[buffer(0)]],
