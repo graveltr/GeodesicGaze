@@ -501,7 +501,7 @@ kernel void crasher_compute_kernel(const device float *dummyData [[buffer(0)]],
     float Gphi = GphiResult.val;
     result.GphiValue = Gphi;
     result.GphiStatus = GphiResult.status;
-
+    
     results[id] = result;
 }
 

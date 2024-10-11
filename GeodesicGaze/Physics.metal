@@ -323,9 +323,16 @@ CosThetaObserverResult cosThetaObserver(float nuthetas, float tau, float a, floa
     
     float deltaTheta = (1.0 / 2.0) * (1.0 - (eta + lambda * lambda) / (a * a));
     
+    
+    /*
     float uplus = deltaTheta + sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
     float uminus = deltaTheta - sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
+    */
+    float2 uplusUminus = computeUplusUminus(a, eta, lambda);
     
+    float uplus = uplusUminus.x;
+    float uminus = uplusUminus.y;
+     
     MathcalGResult mathcalGthetaResult = mathcalGtheta(a, thetas, uplus, uminus);
     if (mathcalGthetaResult.status != SUCCESS) {
         result.status = FAILURE;

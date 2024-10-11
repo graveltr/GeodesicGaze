@@ -13,7 +13,7 @@
 
 struct IrResult {
     float val;
-    float status;
+    int status;
 };
 
 struct SchwarzschildLenseResult {
@@ -47,27 +47,27 @@ struct KerrRadialRootsResult {
 
 struct CosThetaObserverResult {
     float val;
-    float status;
+    int status;
 };
 
 struct Result {
     float val;
-    float status;
+    int status;
 };
 
 struct F2ofrResult {
     float val;
-    float status;
+    int status;
 };
 
 struct IphiResult {
     float val;
-    float status;
+    int status;
 };
 
 struct MathcalGResult {
     float val;
-    float status;
+    int status;
 };
 
 
