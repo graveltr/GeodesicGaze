@@ -130,6 +130,16 @@ class BhiMixer {
             }
         }
         
+        for (i, row) in matrixResult.enumerated() {
+            var numError = 0;
+            for (j, vector) in row.enumerated() {
+                if (vector.z == -1) {
+                    numError += 1;
+                }
+            }
+            print("row: \(i) numError: \(numError)")
+        }
+        
         let a = matrixResult[0][0]
     }
     

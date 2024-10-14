@@ -335,11 +335,10 @@ fragment float4 preComputedFragmentShader(VertexOut in [[stage_in]],
                                           constant Uniforms &uniforms [[buffer(0)]]) {
     constexpr sampler s(coord::normalized, address::clamp_to_edge, filter::linear);
     
-    if (0.897 < in.texCoord.x && in.texCoord.x < 0.9
-        && 0.897 < in.texCoord.y && in.texCoord.y < 0.9) {
-        return float4(1.0, 0.0, 0.0, 1.0);
+    if (0.28 < in.texCoord.x && in.texCoord.x < 0.29 && 0.50 < in.texCoord.y && in.texCoord.y < 0.52) {
+        return float4(1,0,0,1);
     }
-
+    
     float2 backPipOrigin = float2(0.05, 0.7);
     float2 frontPipOrigin = float2(0.05, 0.05);
     
@@ -404,6 +403,41 @@ fragment float4 preComputedFragmentShader(VertexOut in [[stage_in]],
     return float4(1.0, 1.0, 1.0, 1.0);
 }
 
+float2 pixelToScreen(float2 pixelCoords) {
+    float base = 0.04;
+    float rcrit = 300.0;
+    float alpha = 1000.0;
+    int n = 1;
+    
+    float r = sqrt(pixelCoords.x * pixelCoords.x + pixelCoords.y * pixelCoords.y);
+    
+    if (r < rcrit) {
+        return base * pixelCoords;
+    }
+    
+    return ((1.0 / alpha) * pow(r - rcrit, n) + base) * pixelCoords;
+    // return 0.2 * pixelCoords;
+}
+
+/*
+float2 pixelToScreenZoomAboutCriticalCurve(float2 pixelCoords) {
+    float base = 0.04;
+    float rcrit = 180.0;
+    
+    float r = sqrt(pixelCoords.x * pixelCoords.x + pixelCoords.y * pixelCoords.y);
+    float theta = atan2(pixelCoords.y, pixelCoords.x);
+    
+    if (r < rcrit) {
+        return base * pixelCoords;
+    }
+    
+    float alpha = 0.01;
+    float rtilde = rcrit + alpha * (r - rcrit);
+    
+    return base * float2(rtilde * cos(theta), rtilde * sin(theta));
+}
+*/
+
 LenseTextureCoordinateResult schwarzschildLenseTextureCoordinate(float2 inCoord) {
     LenseTextureCoordinateResult result;
     
@@ -431,9 +465,10 @@ LenseTextureCoordinateResult schwarzschildLenseTextureCoordinate(float2 inCoord)
     float2 relativePixelCoords = pixelCoords - center;
     
     // Convert the pixel coordinates to coordinates in the image plane
-    float lengthPerPixel = 0.1;
+    float lengthPerPixel = 0.2;
     float2 imagePlaneCoords = lengthPerPixel * relativePixelCoords;
-   
+    // float2 imagePlaneCoords = pixelToScreen(relativePixelCoords);
+
     // Obtain the polar coordinates of this image plane location
     float b = length(imagePlaneCoords);
     float psi = atan2(imagePlaneCoords.y, imagePlaneCoords.x);
@@ -468,38 +503,6 @@ LenseTextureCoordinateResult schwarzschildLenseTextureCoordinate(float2 inCoord)
     result.coord = transformedTexCoord;
     result.status = SUCCESS;
     return result;
-}
-
-float2 pixelToScreen(float2 pixelCoords) {
-    float base = 0.04;
-    float rcrit = 300.0;
-    float alpha = 1000.0;
-    int n = 1;
-    
-    float r = sqrt(pixelCoords.x * pixelCoords.x + pixelCoords.y * pixelCoords.y);
-    
-    if (r < rcrit) {
-        return base * pixelCoords;
-    }
-    
-    return ((1.0 / alpha) * pow(r - rcrit, n) + base) * pixelCoords;
-}
-
-float2 pixelToScreenZoomAboutCriticalCurve(float2 pixelCoords) {
-    float base = 0.04;
-    float rcrit = 180.0;
-    
-    float r = sqrt(pixelCoords.x * pixelCoords.x + pixelCoords.y * pixelCoords.y);
-    float theta = atan2(pixelCoords.y, pixelCoords.x);
-    
-    if (r < rcrit) {
-        return base * pixelCoords;
-    }
-    
-    float alpha = 0.01;
-    float rtilde = rcrit + alpha * (r - rcrit);
-    
-    return base * float2(rtilde * cos(theta), rtilde * sin(theta));
 }
 
 
@@ -543,7 +546,7 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
      * ray trace from this location back into the geometry.
      */
     float M = 1.0;
-    float a = 0.001;
+    float a = 0.9;
     float thetas = M_PI_F / 2.0;
     float rs = 1000.0;
     float ro = rs;
@@ -559,8 +562,11 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
     
     // Convert the pixel coordinates to coordinates in the image plane (alpha, beta)
     float2 imagePlaneCoords = pixelToScreen(relativePixelCoords);
-    float alpha = imagePlaneCoords.x;
-    float beta = imagePlaneCoords.y;
+    
+    // NOTICE THAT y and x are swapped! The first index into inCoord is
+    // the up and down direction.
+    float alpha = imagePlaneCoords.y;
+    float beta = imagePlaneCoords.x;
 
     // Convert (alpha, beta) -> (lambda, eta)
     float lambda = -1.0 * alpha * sin(thetas);
@@ -606,7 +612,8 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
             u = (phifNormalized - oneTwoBdd) / (threeFourBdd - oneTwoBdd);
             result.status = SUCCESS_BACK_TEXTURE;
         }
-        float2 transformedTexCoord = float2(u, v);
+        // NOTICE THAT u and v are swapped! Same reason as before.
+        float2 transformedTexCoord = float2(v, u);
         
         result.coord = transformedTexCoord;
         return result;
@@ -655,7 +662,7 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
  * To avoid computing the same lensing map every frame, we compute once
  * and store the result in a look-up table (LUT). The LUT is then passed
  * to the fragment shader on subsequent render passes (per frame updates)
- * and simpled sampled.
+ * and sampled.
  */
 kernel void precomputeLut(texture2d<float, access::write> lut [[texture(0)]],
                           constant PreComputeUniforms &uniforms [[buffer(0)]],
@@ -665,7 +672,8 @@ kernel void precomputeLut(texture2d<float, access::write> lut [[texture(0)]],
     // This is normalizing to texture coordinate between 0 and 1
     float2 originalCoord = float2(gid) / float2(lut.get_width(), lut.get_height());
     LenseTextureCoordinateResult result = kerrLenseTextureCoordinate(originalCoord, uniforms.mode);
-    
+    // LenseTextureCoordinateResult result = schwarzschildLenseTextureCoordinate(originalCoord);
+
     uint linearIndex = gid.y * width + gid.x;
     
     // Need to pass the status code within the look-up table. We do so in the

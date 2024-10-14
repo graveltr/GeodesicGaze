@@ -385,7 +385,7 @@ float2 computeUplusUminus(float a, float eta, float lambda) {
     float epsilon = alpha / (deltaTheta * deltaTheta);
     
     float uplus, uminus;
-    if (epsilon < 0.00001) {
+    if (epsilon < 0.001) {
         float linearOrder = (sqrt(deltaTheta * deltaTheta) / 2.0) * epsilon;
         
         if (deltaTheta < 0.0) {

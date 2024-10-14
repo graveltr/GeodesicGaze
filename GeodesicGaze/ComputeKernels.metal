@@ -192,7 +192,7 @@ kernel void kerr_lense_compute_kernel(const device float *dummyData [[buffer(0)]
     float backTextureHeight = 1080.0;
 
     float M = 1.0;
-    float a = 0.6;
+    float a = 0.1;
     float thetas = M_PI_F / 4.0;
     float rs = 1000.0;
     float ro = rs;
@@ -331,7 +331,7 @@ LenseTextureCoordinateResultP kerrLenseTextureCoordinateP(float2 inCoord, int mo
      * ray trace from this location back into the geometry.
      */
     float M = 1.0;
-    float a = 0.001;
+    float a = 0.1;
     float thetas = M_PI_F / 2.0;
     float rs = 1000.0;
     float ro = rs;
@@ -347,8 +347,8 @@ LenseTextureCoordinateResultP kerrLenseTextureCoordinateP(float2 inCoord, int mo
     
     // Convert the pixel coordinates to coordinates in the image plane (alpha, beta)
     float2 imagePlaneCoords = pixelToScreenP(relativePixelCoords);
-    float alpha = imagePlaneCoords.x;
-    float beta = imagePlaneCoords.y;
+    float alpha = imagePlaneCoords.y;
+    float beta = imagePlaneCoords.x;
 
     // Convert (alpha, beta) -> (lambda, eta)
     float lambda = -1.0 * alpha * sin(thetas);
@@ -407,16 +407,16 @@ kernel void crasher_compute_kernel(const device float *dummyData [[buffer(0)]],
     float backTextureWidth = 1920.0;
     float backTextureHeight = 1080.0;
     
-    float2 inCoord = float2(0.0132850241, 0);
-    LenseTextureCoordinateResultP lenseResult = kerrLenseTextureCoordinateP(inCoord, 0);
-    result.GphiStatus = lenseResult.status;
+    float2 inCoord = float2(0.286231875, 0.521205366);
+    // LenseTextureCoordinateResultP lenseResult = kerrLenseTextureCoordinateP(inCoord, 0);
+    // result.GphiStatus = lenseResult.status;
     
     /*
      * The convention we use is to call the camera screen the "source" since we
      * ray trace from this location back into the geometry.
      */
     float M = 1.0;
-    float a = 0.001;
+    float a = 0.1;
     float thetas = M_PI_F / 2.0;
     float rs = 1000.0;
     float ro = rs;
@@ -432,8 +432,8 @@ kernel void crasher_compute_kernel(const device float *dummyData [[buffer(0)]],
     
     // Convert the pixel coordinates to coordinates in the image plane (alpha, beta)
     float2 imagePlaneCoords = pixelToScreenP(relativePixelCoords);
-    float alpha = imagePlaneCoords.x;
-    float beta = imagePlaneCoords.y;
+    float alpha = imagePlaneCoords.y;
+    float beta = imagePlaneCoords.x;
 
     // Convert (alpha, beta) -> (lambda, eta)
     float lambda = -1.0 * alpha * sin(thetas);
@@ -452,7 +452,7 @@ kernel void crasher_compute_kernel(const device float *dummyData [[buffer(0)]],
     roots[2] = rootsResult.roots[2];
     roots[3] = rootsResult.roots[3];
     
-    result.IphiStatus = 1111;
+    // result.IphiStatus = 1111;
     
     // If not in case (2), then black hole emission.
     if (!(isReal(roots[0]) &&
@@ -491,17 +491,45 @@ kernel void crasher_compute_kernel(const device float *dummyData [[buffer(0)]],
     float tau = Ir;
     result.IrValue = Ir;
     result.IrStatus = IrResult.status;
-    
+
     CosThetaObserverResult cosThetaObserverResult = cosThetaObserver(nuthetas, tau, a, M, thetas, eta, lambda);
     float cosThetaObserver = cosThetaObserverResult.val;
     result.cosThetaObserverValue = cosThetaObserver;
     result.cosThetaObserverStatus = cosThetaObserverResult.status;
-    
+
+    /*
     Result GphiResult = computeGphi(nuthetas, tau, a, M, thetas, eta, lambda);
     float Gphi = GphiResult.val;
     result.GphiValue = Gphi;
     result.GphiStatus = GphiResult.status;
+    */
     
+    // START UNWINDING GPHI
+    
+    float2 uplusUminus = computeUplusUminus(a, eta, lambda);
+    
+    float uplus = uplusUminus.x;
+    float uminus = uplusUminus.y;
+    
+    Result mathcalGphiResult = mathcalGphi(a, thetas, uplus, uminus);
+    float mathcalGphis = mathcalGphiResult.val;
+    result.mathcalGphisValue = mathcalGphis;
+    result.mathcalGphisStatus = mathcalGphiResult.status;
+    
+    Result psiTauResult = Psitau(a, uplus, uminus, tau, thetas, nuthetas);
+    float psiTau = psiTauResult.val;
+    result.psiTauValue = psiTau;
+    result.psiTauStatus = psiTauResult.status;
+    
+    EllintResult ellipticPResult = ellint_P_mma(psiTau, uplus / uminus, uplus, 1e-5, 1e-5);
+    result.ellipticPValue = ellipticPResult.val;
+    result.ellipticPStatus = ellipticPResult.status;
+    
+    result.t1 = uplus / uminus;
+    result.t2 = uplus; 
+    
+    // END UNWINDING GPHI
+
     results[id] = result;
 }
 
