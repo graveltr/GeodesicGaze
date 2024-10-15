@@ -8,8 +8,12 @@
 import SwiftUI
 
 struct ContentView: View {
+    
+    @State private var counter = 0
+    @State private var selectedFilter = 0
+    
     var body: some View {
-        MultiCamView()
+        MultiCamView(counter: $counter, selectedFilter: $selectedFilter)
             .edgesIgnoringSafeArea(/*@START_MENU_TOKEN@*/.all/*@END_MENU_TOKEN@*/)
     }
 }

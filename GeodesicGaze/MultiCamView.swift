@@ -3,6 +3,10 @@ import AVFoundation
 import MetalKit
 
 struct MultiCamView: UIViewControllerRepresentable {
+    
+    @Binding var counter: Int
+    @Binding var selectedFilter: Int
+    
     class Coordinator: NSObject, MultiCamCaptureDelegate, MTKViewDelegate {
         var parent: MultiCamView
         var mixer: BhiMixer
@@ -26,10 +30,33 @@ struct MultiCamView: UIViewControllerRepresentable {
         
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
           mixer.createLutTexture(width: Int(size.width), height: Int(size.height))
-          mixer.precomputeLutTexture()
+          mixer.precomputeLutTexture(selectedFilter: 0)
         }
         
         func draw(in view: MTKView) {}
+        
+        @objc func handleTapGesture(_ sender: UITapGestureRecognizer) {
+            guard let view = sender.view else { return }
+            
+            parent.counter += 1
+            
+            print("Coordinator: view was tapped! Counter: \(parent.counter)")
+        }
+        
+        @objc func handleButton1() {
+            print("Button1: button was tapped!")
+            mixer.precomputeLutTexture(selectedFilter: 0)
+        }
+        
+        @objc func handleButton2() {
+            print("Button2: button was tapped!")
+            mixer.precomputeLutTexture(selectedFilter: 1)
+        }
+        
+        @objc func handleButton3() {
+            print("Button3: button was tapped!")
+            mixer.precomputeLutTexture(selectedFilter: 2)
+        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -45,45 +72,6 @@ struct MultiCamView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         let viewController = UIViewController()
         
-        // let videoViewHeight = viewController.view.bounds.height / 3
-        
-        // Configure the views.
-        /*
-        let frontView = UIView(frame: CGRect(x: 0, y: 0, width: viewController.view.bounds.width, height: videoViewHeight))
-        let backView = UIView(frame: CGRect(x: 0, y: videoViewHeight, width: viewController.view.bounds.width, height: videoViewHeight))
-        let mtkView = context.coordinator.mtkView
-        mtkView.frame = CGRect(x: 0, y: 2 * videoViewHeight, width: viewController.view.bounds.width, height: videoViewHeight)
-        */
-        
-        /*
-        let lensedViewHeight = viewController.view.bounds.height * 0.8;
-        let previewViewHeight = viewController.view.bounds.height * 0.2;
-        
-        let frontView = UIView(frame: CGRect(x: viewController.view.bounds.width / 2,
-                                             y: 0,
-                                             width: viewController.view.bounds.width,
-                                             height: previewViewHeight))
-        let backView = UIView(frame: CGRect(x: 0,
-                                            y: 0,
-                                            width: viewController.view.bounds.width / 2,
-                                            height: previewViewHeight))
-        
-        let mtkView = context.coordinator.mtkView
-        mtkView.frame = CGRect(x: 0, 
-                               y: previewViewHeight,
-                               width: viewController.view.bounds.width,
-                               height: lensedViewHeight)
-        
-        viewController.view.addSubview(frontView)
-        viewController.view.addSubview(backView)
-        viewController.view.addSubview(mtkView)
-
-        let multiCamCapture = context.coordinator.multiCamCapture
-        multiCamCapture.setupPreviewLayers(frontView: frontView, backView: backView)
-        multiCamCapture.delegate = context.coordinator
-        multiCamCapture.startRunning()
-         */
-        
         let mtkView = context.coordinator.mtkView
         mtkView.frame = CGRect(x: 0,
                                y: 0,
@@ -95,11 +83,59 @@ struct MultiCamView: UIViewControllerRepresentable {
         let multiCamCapture = context.coordinator.multiCamCapture
         multiCamCapture.delegate = context.coordinator
         multiCamCapture.startRunning()
+        
+        // Add gesture support
+        let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTapGesture(_:)))
+        viewController.view.addGestureRecognizer(tapGesture)
+        
+        let button1 = createButton(withTitle: "1", target: context.coordinator, 
+                                   action: #selector(context.coordinator.handleButton1))
+        let button2 = createButton(withTitle: "2", target: context.coordinator, 
+                                   action: #selector(context.coordinator.handleButton2))
+        let button3 = createButton(withTitle: "3", target: context.coordinator, 
+                                   action: #selector(context.coordinator.handleButton3))
 
+        viewController.view.addSubview(button1)
+        viewController.view.addSubview(button2)
+        viewController.view.addSubview(button3)
+
+        button1.translatesAutoresizingMaskIntoConstraints = false
+        button2.translatesAutoresizingMaskIntoConstraints = false
+        button3.translatesAutoresizingMaskIntoConstraints = false
+
+        // Define the layout constraints
+        NSLayoutConstraint.activate([
+            button1.bottomAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            button1.centerXAnchor.constraint(equalTo: viewController.view.centerXAnchor, constant: -70),
+            button1.widthAnchor.constraint(equalToConstant: 50),
+            button1.heightAnchor.constraint(equalToConstant: 50),
+
+            button2.bottomAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            button2.centerXAnchor.constraint(equalTo: viewController.view.centerXAnchor),
+            button2.widthAnchor.constraint(equalToConstant: 50),
+            button2.heightAnchor.constraint(equalToConstant: 50),
+
+            button3.bottomAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            button3.centerXAnchor.constraint(equalTo: viewController.view.centerXAnchor, constant: 70),
+            button3.widthAnchor.constraint(equalToConstant: 50),
+            button3.heightAnchor.constraint(equalToConstant: 50)
+        ])
+        
         return viewController
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
         // Update the UI view controller if needed
+    }
+    
+    private func createButton(withTitle title: String, target: Any?, action: Selector) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setTitle(title, for: .normal)
+        button.addTarget(target, action: action, for: .touchUpInside)
+        button.backgroundColor = .systemBlue
+        button.setTitleColor(.white, for: .normal)
+        button.clipsToBounds = true
+        button.layer.cornerRadius = 25
+        return button
     }
 }

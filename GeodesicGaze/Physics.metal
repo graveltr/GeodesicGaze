@@ -400,6 +400,12 @@ float2 computeUplusUminus(float a, float eta, float lambda) {
         uminus = deltaTheta - sqrt(deltaTheta * deltaTheta + (eta / (a * a)));
     }
     
+    /*
+    if (1.0 <= uplus) {
+        uplus = 0.999;
+    }
+    */
+    
     return float2(uplus, uminus);
 }
 

@@ -77,7 +77,7 @@ class BhiMixer {
         lutTexture = device.makeTexture(descriptor: descriptor)
     }
     
-    func precomputeLutTexture() {
+    func precomputeLutTexture(selectedFilter: Int) {
         let commandBuffer = commandQueue.makeCommandBuffer()!
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
         
@@ -132,7 +132,7 @@ class BhiMixer {
         
         for (i, row) in matrixResult.enumerated() {
             var numError = 0;
-            for (j, vector) in row.enumerated() {
+            for (_, vector) in row.enumerated() {
                 if (vector.z == -1) {
                     numError += 1;
                 }
@@ -140,7 +140,7 @@ class BhiMixer {
             print("row: \(i) numError: \(numError)")
         }
         
-        let a = matrixResult[0][0]
+        _ = matrixResult[0][0]
     }
     
     func mix(frontCameraPixelBuffer: CVPixelBuffer?,
