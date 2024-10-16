@@ -54,6 +54,7 @@ EllintResult ellint_Kcomp_mma(float m, float errtol, float prec);
 
 float3 sphericalToCartesian(float3 sphericalCoords);
 float3 cartesianToSpherical(float3 cartesianCoords);
+float3 rotateSphericalCoordinate(float3 vsSpherical, float3 voSpherical);
 
 float normalizeAngle(float phi);
 
