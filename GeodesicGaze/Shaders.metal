@@ -459,7 +459,7 @@ LenseTextureCoordinateResult schwarzschildLenseTextureCoordinate(float2 inCoord)
     // We let rs and ro be large in this set up.
     // This will allow for the usage of an approximation to the
     // elliptic integrals during lensing.
-    float M = 1.0;
+    float M = 0.0;
     float rs = 1000.0;
     float ro = rs;
     
@@ -666,6 +666,20 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
     return result;
 }
 
+LenseTextureCoordinateResult flatspaceLenseTextureCoordinate(float2 inCoord, int sourceMode) {
+    LenseTextureCoordinateResult result;
+    
+    if (sourceMode == FULL_FOV_MODE) {
+    } else if (sourceMode == ACTUAL_FOV_MODE) {
+        result.status = SUCCESS;
+        result.coord = inCoord;
+    } else {
+        assert(false);
+    }
+    
+    return result;
+}
+
 /*
  * To avoid computing the same lensing map every frame, we compute once
  * and store the result in a look-up table (LUT). The LUT is then passed
@@ -679,13 +693,22 @@ kernel void precomputeLut(texture2d<float, access::write> lut   [[texture(0)]],
                           uint2 gid [[thread_position_in_grid]]) {
     // This is normalizing to texture coordinate between 0 and 1
     float2 originalCoord = float2(gid) / float2(lut.get_width(), lut.get_height());
-    // LenseTextureCoordinateResult result = kerrLenseTextureCoordinate(originalCoord, uniforms.mode);
-    // LenseTextureCoordinateResult result = schwarzschildLenseTextureCoordinate(originalCoord);
+    
+    LenseTextureCoordinateResult result;
+    if (uniforms.spaceTimeMode == 0) {
+        result = flatspaceLenseTextureCoordinate(originalCoord, uniforms.sourceMode);
+    } else if (uniforms.spaceTimeMode == 1) {
+        result = schwarzschildLenseTextureCoordinate(originalCoord);
+    } else if (uniforms.spaceTimeMode == 2) {
+        result = kerrLenseTextureCoordinate(originalCoord, uniforms.sourceMode);
+    } else {
+        assert(false);
+    }
 
     uint linearIndex = gid.y * width + gid.x;
-    LenseTextureCoordinateResult result;
-    result.status = SUCCESS_BACK_TEXTURE;
-    result.coord = originalCoord;
+    // LenseTextureCoordinateResult result;
+    // result.status = SUCCESS_BACK_TEXTURE;
+    // result.coord = originalCoord;
 
     // Need to pass the status code within the look-up table. We do so in the
     // zw components with binary strings (00, 01, 10, 11)

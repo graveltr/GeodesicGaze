@@ -54,7 +54,7 @@ class BhiMixer {
         }
     }
     
-    var filterParameters = FilterParameters(spaceTimeMode: 0, sourceMode: 0, d: 0, a: 0, thetas: 0)
+    var filterParameters = FilterParameters(spaceTimeMode: 1, sourceMode: 1, d: 0, a: 0, thetas: 0)
     var needsNewLutTexture = true
 
     // private let accessQueue = DispatchQueue(label: "com.myapp.lutTextureAccessQueue")
