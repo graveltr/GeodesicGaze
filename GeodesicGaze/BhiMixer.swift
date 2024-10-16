@@ -39,6 +39,14 @@ class BhiMixer {
     
     var lutTexture: MTLTexture!
     var lutTextureTemp: MTLTexture!
+    
+    var selectedFilter = 0 {
+        didSet {
+            needsNewLutTexture = true
+        }
+    }
+    
+    var needsNewLutTexture = true
 
     // private let accessQueue = DispatchQueue(label: "com.myapp.lutTextureAccessQueue")
     private var semaphore = DispatchSemaphore(value: 1)
@@ -194,17 +202,63 @@ class BhiMixer {
              in view: MTKView) {
         // semaphore.wait()
         // defer { semaphore.signal() }
-        
-        // precomputeLutTextureNew(frontCameraPixelBuffer: frontCameraPixelBuffer, backCameraPixelBuffer: backCameraPixelBuffer, in: view)
-            
         // precomputeLutTexture(selectedFilter: 0)
         
-        semaphore.wait()
         guard let drawable = view.currentDrawable else {
+            print("Currentdrawable is nil")
             return
         }
         
-        print("Mixing ...")
+        guard let commandBuffer = commandQueue.makeCommandBuffer() else {
+            print("Couldn't create command buffer")
+            return
+        }
+        
+        if needsNewLutTexture {
+            let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
+            
+            computeEncoder.setComputePipelineState(computePipelineState)
+            
+            var uniforms = PreComputeUniforms(mode: mode)
+            let uniformsBuffer = device.makeBuffer(bytes: &uniforms, 
+                                                   length: MemoryLayout<PreComputeUniforms>.size,
+                                                   options: .storageModeShared)
+            
+            var matrixWidth = lutTexture.width;
+            let matrixHeight = lutTexture.height;
+            
+            print("width: \(matrixWidth), height: \(matrixHeight)")
+            
+            let totalElements = matrixWidth * matrixHeight;
+            
+            let bufferSize = totalElements * MemoryLayout<simd_float3>.stride;
+            guard let matrixBuffer = device.makeBuffer(length: bufferSize, options: .storageModeShared) else {
+                fatalError("Couldn't create buffer")
+            }
+            
+            let widthBuffer = device.makeBuffer(bytes: &matrixWidth, length: MemoryLayout<UInt>.size, options: .storageModeShared)
+            
+            computeEncoder.setBuffer(uniformsBuffer, offset: 0, index: 0)
+            computeEncoder.setBuffer(matrixBuffer, offset: 0, index: 1)
+            computeEncoder.setBuffer(widthBuffer, offset: 0, index: 2)
+            computeEncoder.setTexture(lutTexture, index: 0)
+            
+            /*
+             * lutTexture.dimension + groupSize - 1 / groupSize is just
+             * lutTexture.dimension / groupSize rounded up. This guarantees
+             * that group * groupSize covers the full texture width / height.
+             */
+            let threadGroupSize = MTLSize(width: 16, height: 16, depth: 1)
+            let threadGroups = MTLSize(width: (lutTexture.width + 15) / 16,
+                                       height: (lutTexture.height + 15) / 16,
+                                       depth: 1)
+            
+            computeEncoder.dispatchThreadgroups(threadGroups, threadsPerThreadgroup: threadGroupSize)
+            computeEncoder.endEncoding()
+            
+            needsNewLutTexture = false
+        }
+        
         if let frontCameraPixelBuffer = frontCameraPixelBuffer {
             let textures = createTexture(from: frontCameraPixelBuffer)
             frontYTexture = textures?.0
@@ -220,8 +274,7 @@ class BhiMixer {
             backTextureHeight = textures?.3
         }
         
-        guard let commandBuffer = commandQueue.makeCommandBuffer(),
-              let renderPassDescriptor = view.currentRenderPassDescriptor,
+        guard let renderPassDescriptor = view.currentRenderPassDescriptor,
               let frontYTexture = frontYTexture,
               let frontUVTexture = frontUVTexture,
               let frontTextureWidth = frontTextureWidth,
@@ -229,26 +282,21 @@ class BhiMixer {
               let backYTexture = backYTexture,
               let backUVTexture = backUVTexture,
               let backTextureWidth = backTextureWidth,
-              let backTextureHeight = backTextureHeight,
-              let drawable = view.currentDrawable else {
+              let backTextureHeight = backTextureHeight else {
             print("returning from mix")
             return
         }
-        print("Successfully created command buffer and render pass descriptor")
         
         var uniforms = Uniforms(frontTextureWidth: Int32(frontTextureWidth), 
                                 frontTextureHeight: Int32(frontTextureHeight),
                                 backTextureWidth: Int32(backTextureWidth),
                                 backTextureHeight: Int32(backTextureHeight),
                                 mode: mode)
-        
-        print("backWidth: \(uniforms.backTextureWidth) backHeight: \(uniforms.backTextureHeight)")
         let uniformsBuffer = device.makeBuffer(bytes: &uniforms, length: MemoryLayout<Uniforms>.size, options: .storageModeShared)
-
+        
         renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0)
         renderPassDescriptor.colorAttachments[0].loadAction = .clear
         renderPassDescriptor.colorAttachments[0].storeAction = .store
-        
         if renderPassDescriptor.colorAttachments[0].texture == nil {
             print("texture is null")
             return
@@ -262,16 +310,11 @@ class BhiMixer {
         renderEncoder.setFragmentTexture(backYTexture, index: 2)
         renderEncoder.setFragmentTexture(backUVTexture, index: 3)
         renderEncoder.setFragmentTexture(lutTexture, index: 4)
-
-        print("Successfully set fragment textures and buffers")
-
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-        
         renderEncoder.endEncoding()
+        
         commandBuffer.present(drawable)
         commandBuffer.commit()
-        commandBuffer.waitUntilCompleted()
-        semaphore.signal()
     }
     
     private func createTexture(from pixelBuffer: CVPixelBuffer) -> (MTLTexture?, 

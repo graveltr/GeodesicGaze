@@ -23,21 +23,18 @@ struct MultiCamView: UIViewControllerRepresentable {
         }
         
         func processCameraPixelBuffers(frontCameraPixelBuffer: CVPixelBuffer, backCameraPixelBuffer: CVPixelBuffer) {
-            /*
             DispatchQueue.main.async {
                 self.mixer.mix(frontCameraPixelBuffer: frontCameraPixelBuffer,
-                          backCameraPixelBuffer: backCameraPixelBuffer,
-                          in: self.mtkView)
+                               backCameraPixelBuffer: backCameraPixelBuffer,
+                               in: self.mtkView)
             }
-            */
-            mixer.mix(frontCameraPixelBuffer: frontCameraPixelBuffer,
-                      backCameraPixelBuffer: backCameraPixelBuffer,
-                      in: self.mtkView)
+            // mixer.mix(frontCameraPixelBuffer: frontCameraPixelBuffer,
+            //          backCameraPixelBuffer: backCameraPixelBuffer,
+            //          in: self.mtkView)
         }
         
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
           mixer.createLutTexture(width: Int(size.width), height: Int(size.height))
-          // mixer.precomputeLutTexture(selectedFilter: 0)
         }
         
         func draw(in view: MTKView) {}
