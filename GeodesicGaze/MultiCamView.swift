@@ -23,14 +23,21 @@ struct MultiCamView: UIViewControllerRepresentable {
         }
         
         func processCameraPixelBuffers(frontCameraPixelBuffer: CVPixelBuffer, backCameraPixelBuffer: CVPixelBuffer) {
+            /*
+            DispatchQueue.main.async {
+                self.mixer.mix(frontCameraPixelBuffer: frontCameraPixelBuffer,
+                          backCameraPixelBuffer: backCameraPixelBuffer,
+                          in: self.mtkView)
+            }
+            */
             mixer.mix(frontCameraPixelBuffer: frontCameraPixelBuffer,
                       backCameraPixelBuffer: backCameraPixelBuffer,
-                      in: mtkView)
+                      in: self.mtkView)
         }
         
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
           mixer.createLutTexture(width: Int(size.width), height: Int(size.height))
-          mixer.precomputeLutTexture(selectedFilter: 0)
+          // mixer.precomputeLutTexture(selectedFilter: 0)
         }
         
         func draw(in view: MTKView) {}
@@ -43,9 +50,18 @@ struct MultiCamView: UIViewControllerRepresentable {
             print("Coordinator: view was tapped! Counter: \(parent.counter)")
         }
         
-        @objc func handleButton1() {
+        @objc func handleButton1(_ sender: UIButton) {
+            sender.isEnabled = false
             print("Button1: button was tapped!")
-            mixer.precomputeLutTexture(selectedFilter: 0)
+
+            DispatchQueue.global().async {
+                self.mixer.precomputeLutTexture(selectedFilter: 0)
+                
+                DispatchQueue.main.async {
+                    sender.isEnabled = true
+                }
+            }
+            // mixer.precomputeLutTexture(selectedFilter: 0)
         }
         
         @objc func handleButton2() {
@@ -89,8 +105,8 @@ struct MultiCamView: UIViewControllerRepresentable {
         viewController.view.addGestureRecognizer(tapGesture)
         
         let button1 = createButton(withTitle: "1", target: context.coordinator, 
-                                   action: #selector(context.coordinator.handleButton1))
-        let button2 = createButton(withTitle: "2", target: context.coordinator, 
+                                   action: #selector(context.coordinator.handleButton1(_:)))
+        let button2 = createButton(withTitle: "2", target: context.coordinator,
                                    action: #selector(context.coordinator.handleButton2))
         let button3 = createButton(withTitle: "3", target: context.coordinator, 
                                    action: #selector(context.coordinator.handleButton3))

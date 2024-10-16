@@ -23,6 +23,7 @@ class BhiMixer {
     
     var device: MTLDevice!
     var commandQueue: MTLCommandQueue!
+    var precomputeCommandQueue: MTLCommandQueue!
     var textureCache: CVMetalTextureCache!
     var pipelineState: MTLRenderPipelineState!
     var computePipelineState: MTLComputePipelineState!
@@ -37,10 +38,15 @@ class BhiMixer {
     var mode: Int32!
     
     var lutTexture: MTLTexture!
+    var lutTextureTemp: MTLTexture!
+
+    // private let accessQueue = DispatchQueue(label: "com.myapp.lutTextureAccessQueue")
+    private var semaphore = DispatchSemaphore(value: 1)
 
     init(device: MTLDevice) {
         self.device = device
         self.commandQueue = device.makeCommandQueue()
+        self.precomputeCommandQueue = device.makeCommandQueue()
         self.mode = 0
         CVMetalTextureCacheCreate(nil, nil, device, nil, &textureCache)
         setupPipelines()
@@ -75,10 +81,12 @@ class BhiMixer {
         descriptor.usage = [.shaderRead, .shaderWrite]
         
         lutTexture = device.makeTexture(descriptor: descriptor)
+        lutTextureTemp = device.makeTexture(descriptor: descriptor)
     }
     
     func precomputeLutTexture(selectedFilter: Int) {
-        let commandBuffer = commandQueue.makeCommandBuffer()!
+        semaphore.wait()
+        let commandBuffer = precomputeCommandQueue.makeCommandBuffer()!
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
         
         computeEncoder.setComputePipelineState(computePipelineState)
@@ -86,8 +94,10 @@ class BhiMixer {
         var uniforms = PreComputeUniforms(mode: mode)
         let uniformsBuffer = device.makeBuffer(bytes: &uniforms, length: MemoryLayout<PreComputeUniforms>.size, options: .storageModeShared)
         
-        var matrixWidth = lutTexture.width;
-        let matrixHeight = lutTexture.height;
+        var matrixWidth = lutTextureTemp.width;
+        let matrixHeight = lutTextureTemp.height;
+        
+        print("width: \(matrixWidth), height: \(matrixHeight)")
         
         let totalElements = matrixWidth * matrixHeight;
         
@@ -101,7 +111,9 @@ class BhiMixer {
         computeEncoder.setBuffer(uniformsBuffer, offset: 0, index: 0)
         computeEncoder.setBuffer(matrixBuffer, offset: 0, index: 1)
         computeEncoder.setBuffer(widthBuffer, offset: 0, index: 2)
-        computeEncoder.setTexture(lutTexture, index: 0)
+        
+        // Write to the temporary texture
+        computeEncoder.setTexture(lutTextureTemp, index: 0)
         
         /*
          * lutTexture.dimension + groupSize - 1 / groupSize is just
@@ -109,14 +121,47 @@ class BhiMixer {
          * that group * groupSize covers the full texture width / height.
          */
         let threadGroupSize = MTLSize(width: 16, height: 16, depth: 1)
-        let threadGroups = MTLSize(width: (lutTexture.width + 15) / 16,
-                                   height: (lutTexture.height + 15) / 16,
+        let threadGroups = MTLSize(width: (lutTextureTemp.width + 15) / 16,
+                                   height: (lutTextureTemp.height + 15) / 16,
                                    depth: 1)
         
         computeEncoder.dispatchThreadgroups(threadGroups, threadsPerThreadgroup: threadGroupSize)
-        computeEncoder.endEncoding()
         
+        /*
+        commandBuffer.addCompletedHandler { _ in
+            print("Lut texture computation completed and updated")
+        }
+        */
+        
+        computeEncoder.endEncoding()
         commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+        
+        // Now copy results from lutTextureTemp to lutTexture using a blit command encoder
+        let blitCommandBuffer = precomputeCommandQueue.makeCommandBuffer()!
+        guard let blitEncoder = blitCommandBuffer.makeBlitCommandEncoder() else {
+            fatalError("Failed to create blit encoder")
+        }
+        
+         
+        blitEncoder.copy(from: lutTextureTemp, sourceSlice: 0, sourceLevel: 0,
+                         sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+                         sourceSize: MTLSize(width: lutTextureTemp.width, 
+                                             height: lutTextureTemp.height, 
+                                             depth: 1),
+                         to: lutTexture, destinationSlice: 0, destinationLevel: 0,
+                         destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0))
+        
+        blitEncoder.endEncoding()
+        blitCommandBuffer.commit()
+        blitCommandBuffer.waitUntilCompleted()
+        semaphore.signal()
+        
+        // semaphore.wait()
+        // lutTexture = lutTextureTemp
+        // semaphore.signal()
+
+        /*
         commandBuffer.waitUntilCompleted()
         
         let dataPointer = matrixBuffer.contents().bindMemory(to: simd_float3.self, capacity: totalElements)
@@ -141,12 +186,20 @@ class BhiMixer {
         }
         
         _ = matrixResult[0][0]
+        */
     }
     
     func mix(frontCameraPixelBuffer: CVPixelBuffer?,
              backCameraPixelBuffer: CVPixelBuffer?,
              in view: MTKView) {
+        // semaphore.wait()
+        // defer { semaphore.signal() }
         
+        // precomputeLutTextureNew(frontCameraPixelBuffer: frontCameraPixelBuffer, backCameraPixelBuffer: backCameraPixelBuffer, in: view)
+            
+        // precomputeLutTexture(selectedFilter: 0)
+        
+        semaphore.wait()
         guard let drawable = view.currentDrawable else {
             return
         }
@@ -217,6 +270,8 @@ class BhiMixer {
         renderEncoder.endEncoding()
         commandBuffer.present(drawable)
         commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+        semaphore.signal()
     }
     
     private func createTexture(from pixelBuffer: CVPixelBuffer) -> (MTLTexture?, 
