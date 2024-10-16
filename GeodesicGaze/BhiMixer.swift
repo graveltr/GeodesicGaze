@@ -21,6 +21,14 @@ class BhiMixer {
         var mode: Int32
     }
     
+    struct FilterParameters {
+        var spaceTimeMode: Int32
+        var sourceMode: Int32
+        var d: Float
+        var a: Float
+        var thetas: Float
+    }
+
     var device: MTLDevice!
     var commandQueue: MTLCommandQueue!
     var precomputeCommandQueue: MTLCommandQueue!
@@ -46,6 +54,7 @@ class BhiMixer {
         }
     }
     
+    var filterParameters = FilterParameters(spaceTimeMode: 0, sourceMode: 0, d: 0, a: 0, thetas: 0)
     var needsNewLutTexture = true
 
     // private let accessQueue = DispatchQueue(label: "com.myapp.lutTextureAccessQueue")
@@ -200,9 +209,6 @@ class BhiMixer {
     func mix(frontCameraPixelBuffer: CVPixelBuffer?,
              backCameraPixelBuffer: CVPixelBuffer?,
              in view: MTKView) {
-        // semaphore.wait()
-        // defer { semaphore.signal() }
-        // precomputeLutTexture(selectedFilter: 0)
         
         guard let drawable = view.currentDrawable else {
             print("Currentdrawable is nil")
@@ -218,32 +224,29 @@ class BhiMixer {
             print("computing new lut texture")
             
             let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
-            
             computeEncoder.setComputePipelineState(computePipelineState)
             
-            var uniforms = PreComputeUniforms(mode: mode)
-            let uniformsBuffer = device.makeBuffer(bytes: &uniforms, 
-                                                   length: MemoryLayout<PreComputeUniforms>.size,
-                                                   options: .storageModeShared)
-            
+            var otherFilterParameters = FilterParameters(spaceTimeMode: filterParameters.spaceTimeMode,
+                                                         sourceMode: filterParameters.sourceMode,
+                                                         d: filterParameters.d,
+                                                         a: filterParameters.a,
+                                                         thetas: filterParameters.thetas)
+            let filterParametersBuffer = device.makeBuffer(bytes: &otherFilterParameters,
+                                                           length: MemoryLayout<FilterParameters>.size,
+                                                           options: .storageModeShared)
+
             var matrixWidth = lutTexture.width;
             let matrixHeight = lutTexture.height;
-            
-            print("width: \(matrixWidth), height: \(matrixHeight)")
-            
             let totalElements = matrixWidth * matrixHeight;
-            
             let bufferSize = totalElements * MemoryLayout<simd_float3>.stride;
-            guard let matrixBuffer = device.makeBuffer(length: bufferSize, options: .storageModeShared) else {
-                fatalError("Couldn't create buffer")
-            }
             
+            let matrixBuffer = device.makeBuffer(length: bufferSize, options: .storageModeShared)
             let widthBuffer = device.makeBuffer(bytes: &matrixWidth, length: MemoryLayout<UInt>.size, options: .storageModeShared)
             
-            computeEncoder.setBuffer(uniformsBuffer, offset: 0, index: 0)
-            computeEncoder.setBuffer(matrixBuffer, offset: 0, index: 1)
-            computeEncoder.setBuffer(widthBuffer, offset: 0, index: 2)
-            computeEncoder.setTexture(lutTexture, index: 0)
+            computeEncoder.setBuffer(filterParametersBuffer,    offset: 0, index: 0)
+            computeEncoder.setBuffer(matrixBuffer,              offset: 0, index: 1)
+            computeEncoder.setBuffer(widthBuffer,               offset: 0, index: 2)
+            computeEncoder.setTexture(lutTexture,                          index: 0)
             
             /*
              * lutTexture.dimension + groupSize - 1 / groupSize is just

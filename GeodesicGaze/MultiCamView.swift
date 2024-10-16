@@ -47,7 +47,7 @@ struct MultiCamView: UIViewControllerRepresentable {
         @objc func handleButton1(_ sender: UIButton) {
             sender.isEnabled = false
             print("Button1: button was tapped!")
-            mixer.selectedFilter = 0
+            mixer.needsNewLutTexture = true
             sender.isEnabled = true
 
             /*

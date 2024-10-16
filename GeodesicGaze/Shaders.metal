@@ -47,6 +47,14 @@ struct PreComputeUniforms {
     int mode;
 };
 
+struct FilterParameters {
+    int spaceTimeMode;
+    int sourceMode;
+    float d;
+    float a;
+    float thetas;
+};
+
 vertex VertexOut vertexShader(uint vertexID [[vertex_id]]) {
     float4 positions[4] = {
         float4(-1.0,  1.0, 0.0, 1.0),
@@ -664,10 +672,10 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
  * to the fragment shader on subsequent render passes (per frame updates)
  * and sampled.
  */
-kernel void precomputeLut(texture2d<float, access::write> lut [[texture(0)]],
-                          constant PreComputeUniforms &uniforms [[buffer(0)]],
-                          device float3* matrix [[buffer(1)]],
-                          constant uint& width [[buffer(2)]],
+kernel void precomputeLut(texture2d<float, access::write> lut   [[texture(0)]],
+                          constant FilterParameters &uniforms   [[buffer(0)]],
+                          device float3* matrix                 [[buffer(1)]],
+                          constant uint& width                  [[buffer(2)]],
                           uint2 gid [[thread_position_in_grid]]) {
     // This is normalizing to texture coordinate between 0 and 1
     float2 originalCoord = float2(gid) / float2(lut.get_width(), lut.get_height());
@@ -681,7 +689,7 @@ kernel void precomputeLut(texture2d<float, access::write> lut [[texture(0)]],
 
     // Need to pass the status code within the look-up table. We do so in the
     // zw components with binary strings (00, 01, 10, 11)
-    if (uniforms.mode == FULL_FOV_MODE) {
+    if (uniforms.sourceMode == FULL_FOV_MODE) {
         if (result.status == SUCCESS_BACK_TEXTURE) {
             lut.write(float4(result.coord, 0.0, 0.0), gid); // 00
             //matrix[linearIndex] = float3(originalCoord, 0);
@@ -704,7 +712,7 @@ kernel void precomputeLut(texture2d<float, access::write> lut [[texture(0)]],
         }
     }
     
-    if (uniforms.mode == ACTUAL_FOV_MODE) {
+    if (uniforms.sourceMode == ACTUAL_FOV_MODE) {
         if (result.status == SUCCESS) {
             lut.write(float4(result.coord, 0.0, 0.0), gid);
         }
