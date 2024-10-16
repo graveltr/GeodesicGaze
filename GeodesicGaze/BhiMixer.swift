@@ -215,6 +215,8 @@ class BhiMixer {
         }
         
         if needsNewLutTexture {
+            print("computing new lut texture")
+            
             let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
             
             computeEncoder.setComputePipelineState(computePipelineState)

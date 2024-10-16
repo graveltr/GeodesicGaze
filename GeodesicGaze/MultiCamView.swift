@@ -40,24 +40,25 @@ struct MultiCamView: UIViewControllerRepresentable {
         func draw(in view: MTKView) {}
         
         @objc func handleTapGesture(_ sender: UITapGestureRecognizer) {
-            guard let view = sender.view else { return }
-            
             parent.counter += 1
-            
             print("Coordinator: view was tapped! Counter: \(parent.counter)")
         }
         
         @objc func handleButton1(_ sender: UIButton) {
             sender.isEnabled = false
             print("Button1: button was tapped!")
+            mixer.selectedFilter = 0
+            sender.isEnabled = true
 
+            /*
             DispatchQueue.global().async {
-                self.mixer.precomputeLutTexture(selectedFilter: 0)
+                // self.mixer.precomputeLutTexture(selectedFilter: 0)
                 
                 DispatchQueue.main.async {
                     sender.isEnabled = true
                 }
             }
+            */
             // mixer.precomputeLutTexture(selectedFilter: 0)
         }
         
