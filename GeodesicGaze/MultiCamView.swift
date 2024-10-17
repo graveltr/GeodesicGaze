@@ -12,6 +12,8 @@ struct MultiCamView: UIViewControllerRepresentable {
         var mixer: BhiMixer
         var mtkView: MTKView
         var multiCamCapture: MultiCamCapture
+        var frontCameraPixelBuffer: CVPixelBuffer?
+        var backCameraPixelBuffer: CVPixelBuffer?
 
         init(parent: MultiCamView, mtkView: MTKView, mixer: BhiMixer, multiCamCapture: MultiCamCapture) {
             self.parent = parent
@@ -23,21 +25,31 @@ struct MultiCamView: UIViewControllerRepresentable {
         }
         
         func processCameraPixelBuffers(frontCameraPixelBuffer: CVPixelBuffer, backCameraPixelBuffer: CVPixelBuffer) {
+            /*
             DispatchQueue.main.async {
                 self.mixer.mix(frontCameraPixelBuffer: frontCameraPixelBuffer,
                                backCameraPixelBuffer: backCameraPixelBuffer,
                                in: self.mtkView)
             }
+            */
             // mixer.mix(frontCameraPixelBuffer: frontCameraPixelBuffer,
             //          backCameraPixelBuffer: backCameraPixelBuffer,
             //          in: self.mtkView)
+            DispatchQueue.main.async {
+                self.frontCameraPixelBuffer = frontCameraPixelBuffer
+                self.backCameraPixelBuffer = backCameraPixelBuffer
+            }
         }
         
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
           mixer.createLutTexture(width: Int(size.width), height: Int(size.height))
         }
         
-        func draw(in view: MTKView) {}
+        func draw(in view: MTKView) {
+            mixer.mix(frontCameraPixelBuffer: frontCameraPixelBuffer,
+                      backCameraPixelBuffer: backCameraPixelBuffer,
+                      in: view)
+        }
         
         @objc func handleTapGesture(_ sender: UITapGestureRecognizer) {
             parent.counter += 1

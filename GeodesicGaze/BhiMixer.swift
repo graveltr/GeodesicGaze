@@ -54,8 +54,10 @@ class BhiMixer {
         }
     }
     
-    var filterParameters = FilterParameters(spaceTimeMode: 1, sourceMode: 1, d: 0, a: 0, thetas: 0)
+    var filterParameters = FilterParameters(spaceTimeMode: 2, sourceMode: 1, d: 0, a: 0, thetas: 0)
     var needsNewLutTexture = true
+    
+    var uniformsBuffer: MTLBuffer
 
     // private let accessQueue = DispatchQueue(label: "com.myapp.lutTextureAccessQueue")
     private var semaphore = DispatchSemaphore(value: 1)
@@ -66,6 +68,11 @@ class BhiMixer {
         self.precomputeCommandQueue = device.makeCommandQueue()
         self.mode = 0
         CVMetalTextureCacheCreate(nil, nil, device, nil, &textureCache)
+        
+        var uniforms = Uniforms(frontTextureWidth: 0, frontTextureHeight: 0, backTextureWidth: 0, backTextureHeight: 0, mode: 0)
+        self.uniformsBuffer = device.makeBuffer(bytes: &uniforms,
+                                                length: MemoryLayout<Uniforms>.size,
+                                                options: .storageModeShared)!
         setupPipelines()
     }
     
@@ -86,7 +93,7 @@ class BhiMixer {
             fatalError("Failed to create pipeline state")
         }
         
-        let computeFunction = library?.makeFunction(name: "precomputeLut")
+        let computeFunction = library?.makeFunction(name: "precomputeLutTest")
         computePipelineState = try! device.makeComputePipelineState(function: computeFunction!)
     }
     
@@ -215,53 +222,62 @@ class BhiMixer {
             return
         }
         
-        guard let commandBuffer = commandQueue.makeCommandBuffer() else {
+        guard let computeCommandBuffer = commandQueue.makeCommandBuffer() else {
             print("Couldn't create command buffer")
             return
         }
         
-        if needsNewLutTexture {
-            print("computing new lut texture")
-            
-            let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
-            computeEncoder.setComputePipelineState(computePipelineState)
-            
-            var otherFilterParameters = FilterParameters(spaceTimeMode: filterParameters.spaceTimeMode,
-                                                         sourceMode: filterParameters.sourceMode,
-                                                         d: filterParameters.d,
-                                                         a: filterParameters.a,
-                                                         thetas: filterParameters.thetas)
-            let filterParametersBuffer = device.makeBuffer(bytes: &otherFilterParameters,
-                                                           length: MemoryLayout<FilterParameters>.size,
-                                                           options: .storageModeShared)
+        print("computing new lut texture")
+        
+        let computeEncoder = computeCommandBuffer.makeComputeCommandEncoder()!
+        computeEncoder.setComputePipelineState(computePipelineState)
+        
+        var otherFilterParameters = FilterParameters(spaceTimeMode: filterParameters.spaceTimeMode,
+                                                     sourceMode: filterParameters.sourceMode,
+                                                     d: filterParameters.d,
+                                                     a: filterParameters.a,
+                                                     thetas: filterParameters.thetas)
+        /*
+        let filterParametersBuffer = device.makeBuffer(bytes: &otherFilterParameters,
+                                                       length: MemoryLayout<FilterParameters>.size,
+                                                       options: .storageModeShared)
+        */
 
-            var matrixWidth = lutTexture.width;
-            let matrixHeight = lutTexture.height;
-            let totalElements = matrixWidth * matrixHeight;
-            let bufferSize = totalElements * MemoryLayout<simd_float3>.stride;
-            
-            let matrixBuffer = device.makeBuffer(length: bufferSize, options: .storageModeShared)
-            let widthBuffer = device.makeBuffer(bytes: &matrixWidth, length: MemoryLayout<UInt>.size, options: .storageModeShared)
-            
-            computeEncoder.setBuffer(filterParametersBuffer,    offset: 0, index: 0)
-            computeEncoder.setBuffer(matrixBuffer,              offset: 0, index: 1)
-            computeEncoder.setBuffer(widthBuffer,               offset: 0, index: 2)
-            computeEncoder.setTexture(lutTexture,                          index: 0)
-            
-            /*
-             * lutTexture.dimension + groupSize - 1 / groupSize is just
-             * lutTexture.dimension / groupSize rounded up. This guarantees
-             * that group * groupSize covers the full texture width / height.
-             */
-            let threadGroupSize = MTLSize(width: 16, height: 16, depth: 1)
-            let threadGroups = MTLSize(width: (lutTexture.width + 15) / 16,
-                                       height: (lutTexture.height + 15) / 16,
-                                       depth: 1)
-            
-            computeEncoder.dispatchThreadgroups(threadGroups, threadsPerThreadgroup: threadGroupSize)
-            computeEncoder.endEncoding()
-            
-            needsNewLutTexture = false
+        var matrixWidth = lutTexture.width;
+        let matrixHeight = lutTexture.height;
+        let totalElements = matrixWidth * matrixHeight;
+        let bufferSize = totalElements * MemoryLayout<simd_float3>.stride;
+        
+        /*
+        let matrixBuffer = device.makeBuffer(length: bufferSize, options: .storageModeShared)
+        let widthBuffer = device.makeBuffer(bytes: &matrixWidth, length: MemoryLayout<UInt>.size, options: .storageModeShared)
+        */
+        //computeEncoder.setBuffer(filterParametersBuffer,    offset: 0, index: 0)
+        //computeEncoder.setBuffer(matrixBuffer,              offset: 0, index: 1)
+        //computeEncoder.setBuffer(widthBuffer,               offset: 0, index: 2)
+        computeEncoder.setTexture(lutTexture,                          index: 0)
+        
+        /*
+         * lutTexture.dimension + groupSize - 1 / groupSize is just
+         * lutTexture.dimension / groupSize rounded up. This guarantees
+         * that group * groupSize covers the full texture width / height.
+         */
+        let threadGroupSize = MTLSize(width: 16, height: 16, depth: 1)
+        let threadGroups = MTLSize(width: (lutTexture.width + 15) / 16,
+                                   height: (lutTexture.height + 15) / 16,
+                                   depth: 1)
+        
+        computeEncoder.dispatchThreadgroups(threadGroups, threadsPerThreadgroup: threadGroupSize)
+        computeEncoder.endEncoding()
+        
+        computeCommandBuffer.commit()
+        computeCommandBuffer.waitUntilCompleted()
+        
+        needsNewLutTexture = false
+        
+        guard let renderCommandBuffer = commandQueue.makeCommandBuffer() else {
+            print("Couldn't create command buffer")
+            return
         }
         
         if let frontCameraPixelBuffer = frontCameraPixelBuffer {
@@ -296,8 +312,10 @@ class BhiMixer {
                                 frontTextureHeight: Int32(frontTextureHeight),
                                 backTextureWidth: Int32(backTextureWidth),
                                 backTextureHeight: Int32(backTextureHeight),
-                                mode: mode)
-        let uniformsBuffer = device.makeBuffer(bytes: &uniforms, length: MemoryLayout<Uniforms>.size, options: .storageModeShared)
+                                mode: filterParameters.sourceMode)
+        // let uniformsBuffer = device.makeBuffer(bytes: &uniforms, length: MemoryLayout<Uniforms>.size, options: .storageModeShared)
+        
+        memcpy(uniformsBuffer.contents(), &uniforms, MemoryLayout<Uniforms>.size)
         
         renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0)
         renderPassDescriptor.colorAttachments[0].loadAction = .clear
@@ -307,7 +325,7 @@ class BhiMixer {
             return
         }
 
-        let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
+        let renderEncoder = renderCommandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
         renderEncoder.setRenderPipelineState(pipelineState)
         renderEncoder.setFragmentBuffer(uniformsBuffer, offset: 0, index: 0)
         renderEncoder.setFragmentTexture(frontYTexture, index: 0)
@@ -318,8 +336,17 @@ class BhiMixer {
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         renderEncoder.endEncoding()
         
-        commandBuffer.present(drawable)
-        commandBuffer.commit()
+        renderCommandBuffer.present(drawable)
+        renderCommandBuffer.commit()
+        renderCommandBuffer.waitUntilCompleted()
+
+        /*
+        computeCommandBuffer.addCompletedHandler { _ in
+            renderCommandBuffer.commit()
+        }
+        
+        computeCommandBuffer.commit()
+        */
     }
     
     private func createTexture(from pixelBuffer: CVPixelBuffer) -> (MTLTexture?, 

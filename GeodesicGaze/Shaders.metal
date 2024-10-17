@@ -83,7 +83,7 @@ float2 pixelToScreen(float2 pixelCoords) {
     // return 0.2 * pixelCoords;
 }
 
-LenseTextureCoordinateResult schwarzschildLenseTextureCoordinate(float2 inCoord) {
+LenseTextureCoordinateResult schwarzschildLenseTextureCoordinate(float2 inCoord, int sourceMode) {
     LenseTextureCoordinateResult result;
     
     /*
@@ -128,6 +128,12 @@ LenseTextureCoordinateResult schwarzschildLenseTextureCoordinate(float2 inCoord)
     }
     float varphitilde = lenseResult.varphitilde;
     bool ccw = lenseResult.ccw;
+    
+    if (sourceMode == FULL_FOV_MODE) {
+        
+        
+        return result;
+    }
 
     // Unwind through the inverse transformation to texture coordinates.
     // Note that because ro = rs, we don't need to worry about the front-facing
@@ -256,7 +262,7 @@ LenseTextureCoordinateResult kerrLenseTextureCoordinate(float2 inCoord, int mode
     float lengthPerPixelInverse = 0.5;
     
     // Unwind through the texture -> screen coordinate mappings
-    float2 transformedImagePlaneCoords = float2(alphaflat, betaflat);
+    float2 transformedImagePlaneCoords = float2(betaflat, alphaflat);
     float2 transformedRelativePixelCoords = transformedImagePlaneCoords / lengthPerPixelInverse;
     float2 transformedPixelCoords = transformedRelativePixelCoords + center;
     float2 transformedTexCoord = transformedPixelCoords / float2(backTextureWidth, backTextureHeight);
@@ -277,6 +283,7 @@ LenseTextureCoordinateResult flatspaceLenseTextureCoordinate(float2 inCoord, int
     LenseTextureCoordinateResult result;
     
     if (sourceMode == FULL_FOV_MODE) {
+        // TODO: fill this in
     } else if (sourceMode == ACTUAL_FOV_MODE) {
         result.status = SUCCESS;
         result.coord = inCoord;
@@ -333,14 +340,14 @@ kernel void precomputeLut(texture2d<float, access::write> lut   [[texture(0)]],
     if (uniforms.spaceTimeMode == 0) {
         result = flatspaceLenseTextureCoordinate(originalCoord, uniforms.sourceMode);
     } else if (uniforms.spaceTimeMode == 1) {
-        result = schwarzschildLenseTextureCoordinate(originalCoord);
+        result = schwarzschildLenseTextureCoordinate(originalCoord, uniforms.sourceMode);
     } else if (uniforms.spaceTimeMode == 2) {
         result = kerrLenseTextureCoordinate(originalCoord, uniforms.sourceMode);
     } else {
         assert(false);
     }
 
-    uint linearIndex = gid.y * width + gid.x;
+    // uint linearIndex = gid.y * width + gid.x;
     // LenseTextureCoordinateResult result;
     // result.status = SUCCESS_BACK_TEXTURE;
     // result.coord = originalCoord;
@@ -387,6 +394,16 @@ kernel void precomputeLut(texture2d<float, access::write> lut   [[texture(0)]],
             lut.write(float4(0.0, 0.0, 0.5, 0.5), gid); // 11
         }
     }
+}
+
+kernel void precomputeLutTest(texture2d<float, access::write> lut   [[texture(0)]],
+                              uint2 gid [[thread_position_in_grid]]) {
+    // This is normalizing to texture coordinate between 0 and 1
+    float2 originalCoord = float2(gid) / float2(lut.get_width(), lut.get_height());
+    
+    LenseTextureCoordinateResult result = kerrLenseTextureCoordinate(originalCoord, 0);
+    lut.write(float4(result.coord, 0.0, 0.0), gid);
+    //lut.write(float4(0.0, 0.0, 0.0, 0.0), gid);
 }
 
 fragment float4 preComputedFragmentShader(VertexOut in [[stage_in]],
