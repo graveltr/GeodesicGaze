@@ -54,6 +54,10 @@ class BhiMixer {
     var uniformsBuffer: MTLBuffer
     var widthBuffer: MTLBuffer
     var debugMatrixBuffer: MTLBuffer?
+    
+    var totalElements: Int = 0
+    var debugMatrixWidth: Int = 0
+    var debugMatrixHeight: Int = 0
 
     // private let accessQueue = DispatchQueue(label: "com.myapp.lutTextureAccessQueue")
     private var semaphore = DispatchSemaphore(value: 1)
@@ -103,12 +107,14 @@ class BhiMixer {
         
         lutTexture = device.makeTexture(descriptor: descriptor)
         
-        var matrixWidth = lutTexture.width;
-        let matrixHeight = lutTexture.height;
-        let totalElements = matrixWidth * matrixHeight;
-        let bufferSize = totalElements * MemoryLayout<simd_float3>.stride;
+        debugMatrixWidth = lutTexture.width;
+        debugMatrixHeight = lutTexture.height;
+        totalElements = debugMatrixWidth * debugMatrixHeight;
+        let debugMatrixBufferSize = totalElements * MemoryLayout<simd_float3>.stride;
         
-        debugMatrixBuffer = device.makeBuffer(length: bufferSize, options: .storageModeShared)
+        debugMatrixBuffer = device.makeBuffer(length: debugMatrixBufferSize, options: .storageModeShared)
+        
+        var matrixWidth = debugMatrixWidth
         memcpy(widthBuffer.contents(), &matrixWidth, MemoryLayout<UInt>.size)
     }
     
@@ -250,31 +256,29 @@ class BhiMixer {
         print("Couldn't create texture")
         return nil
     }
-}
+    
+    private func printDebugMatrixContents() {
+        let dataPointer = debugMatrixBuffer?.contents().bindMemory(to: simd_float3.self, capacity: totalElements)
+        let matrixData = Array(UnsafeBufferPointer(start: dataPointer, count: totalElements))
 
-/*
-commandBuffer.waitUntilCompleted()
+        var matrixResult: [[simd_float3]] = Array(repeating: Array(repeating: simd_float3(0,0,0), count: debugMatrixWidth), count: debugMatrixHeight);
 
-let dataPointer = matrixBuffer.contents().bindMemory(to: simd_float3.self, capacity: totalElements)
-let matrixData = Array(UnsafeBufferPointer(start: dataPointer, count: totalElements))
-
-var matrixResult: [[simd_float3]] = Array(repeating: Array(repeating: simd_float3(0,0,0), count: matrixWidth), count: matrixHeight);
-
-for y in 0..<matrixHeight {
-    for x in 0..<matrixWidth {
-        matrixResult[y][x] = matrixData[y * matrixWidth + x]
-    }
-}
-
-for (i, row) in matrixResult.enumerated() {
-    var numError = 0;
-    for (_, vector) in row.enumerated() {
-        if (vector.z == -1) {
-            numError += 1;
+        for y in 0..<debugMatrixHeight {
+            for x in 0..<debugMatrixWidth {
+                matrixResult[y][x] = matrixData[y * debugMatrixWidth + x]
+            }
         }
-    }
-    print("row: \(i) numError: \(numError)")
-}
 
-_ = matrixResult[0][0]
-*/
+        for (i, row) in matrixResult.enumerated() {
+            var numError = 0;
+            for (_, vector) in row.enumerated() {
+                if (vector.z == -1) {
+                    numError += 1;
+                }
+            }
+            print("row: \(i) numError: \(numError)")
+        }
+
+        _ = matrixResult[0][0]
+    }
+}

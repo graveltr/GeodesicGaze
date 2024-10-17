@@ -42,7 +42,7 @@ struct MultiCamView: UIViewControllerRepresentable {
         }
         
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-          mixer.initializeSizeDependentData(width: Int(size.width), height: Int(size.height))
+            mixer.initializeSizeDependentData(width: Int(size.width), height: Int(size.height))
         }
         
         func draw(in view: MTKView) {
@@ -60,18 +60,8 @@ struct MultiCamView: UIViewControllerRepresentable {
             sender.isEnabled = false
             print("Button1: button was tapped!")
             mixer.needsNewLutTexture = true
+            mixer.filterParameters.spaceTimeMode = 0
             sender.isEnabled = true
-
-            /*
-            DispatchQueue.global().async {
-                // self.mixer.precomputeLutTexture(selectedFilter: 0)
-                
-                DispatchQueue.main.async {
-                    sender.isEnabled = true
-                }
-            }
-            */
-            // mixer.precomputeLutTexture(selectedFilter: 0)
         }
         
         @objc func handleButton2() {
