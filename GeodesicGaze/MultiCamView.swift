@@ -42,7 +42,7 @@ struct MultiCamView: UIViewControllerRepresentable {
         }
         
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-          mixer.createLutTexture(width: Int(size.width), height: Int(size.height))
+          mixer.initializeSizeDependentData(width: Int(size.width), height: Int(size.height))
         }
         
         func draw(in view: MTKView) {
@@ -76,12 +76,12 @@ struct MultiCamView: UIViewControllerRepresentable {
         
         @objc func handleButton2() {
             print("Button2: button was tapped!")
-            mixer.precomputeLutTexture(selectedFilter: 1)
+            //mixer.precomputeLutTexture(selectedFilter: 1)
         }
         
         @objc func handleButton3() {
             print("Button3: button was tapped!")
-            mixer.precomputeLutTexture(selectedFilter: 2)
+            //mixer.precomputeLutTexture(selectedFilter: 2)
         }
     }
 

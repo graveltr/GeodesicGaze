@@ -347,7 +347,7 @@ kernel void precomputeLut(texture2d<float, access::write> lut   [[texture(0)]],
         assert(false);
     }
 
-    // uint linearIndex = gid.y * width + gid.x;
+    uint linearIndex = gid.y * width + gid.x;
     // LenseTextureCoordinateResult result;
     // result.status = SUCCESS_BACK_TEXTURE;
     // result.coord = originalCoord;
@@ -357,23 +357,23 @@ kernel void precomputeLut(texture2d<float, access::write> lut   [[texture(0)]],
     if (uniforms.sourceMode == FULL_FOV_MODE) {
         if (result.status == SUCCESS_BACK_TEXTURE) {
             lut.write(float4(result.coord, 0.0, 0.0), gid); // 00
-            //matrix[linearIndex] = float3(originalCoord, 0);
+            matrix[linearIndex] = float3(originalCoord, 0);
         }
         if (result.status == SUCCESS_FRONT_TEXTURE) {
             lut.write(float4(result.coord, 0.0, 1.0), gid); // 01
-            //matrix[linearIndex] = float3(originalCoord, 0);
+            matrix[linearIndex] = float3(originalCoord, 0);
         }
         if (result.status == ERROR) {
             lut.write(float4(0.0, 0.0, 1.0, 0.0), gid); // 10
-            //matrix[linearIndex] = float3(originalCoord, -1);
+            matrix[linearIndex] = float3(originalCoord, -1);
         }
         if (result.status == EMITTED_FROM_BLACK_HOLE) {
             lut.write(float4(0.0, 0.0, 1.0, 1.0), gid); // 11
-            //matrix[linearIndex] = float3(originalCoord, -1);
+            matrix[linearIndex] = float3(originalCoord, -1);
         }
         if (result.status == VORTICAL) {
             lut.write(float4(0.0, 0.0, 0.5, 0.5), gid);
-            //matrix[linearIndex] = float3(originalCoord, -1);
+            matrix[linearIndex] = float3(originalCoord, -1);
         }
     }
     
