@@ -96,7 +96,7 @@ LenseTextureCoordinateResult schwarzschildLenseTextureCoordinate(float2 inCoord,
     // We let rs and ro be large in this set up.
     // This will allow for the usage of an approximation to the
     // elliptic integrals during lensing.
-    float M = 0.0;
+    float M = 1.0;
     float rs = 1000.0;
     float ro = rs;
     

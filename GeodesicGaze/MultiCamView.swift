@@ -64,14 +64,22 @@ struct MultiCamView: UIViewControllerRepresentable {
             sender.isEnabled = true
         }
         
-        @objc func handleButton2() {
+        @objc func handleButton2(_ sender: UIButton) {
             print("Button2: button was tapped!")
-            //mixer.precomputeLutTexture(selectedFilter: 1)
+            sender.isEnabled = false
+            print("Button1: button was tapped!")
+            mixer.needsNewLutTexture = true
+            mixer.filterParameters.spaceTimeMode = 1
+            sender.isEnabled = true
         }
         
-        @objc func handleButton3() {
+        @objc func handleButton3(_ sender: UIButton) {
             print("Button3: button was tapped!")
-            //mixer.precomputeLutTexture(selectedFilter: 2)
+            sender.isEnabled = false
+            print("Button1: button was tapped!")
+            mixer.needsNewLutTexture = true
+            mixer.filterParameters.spaceTimeMode = 2
+            sender.isEnabled = true
         }
     }
 
@@ -107,9 +115,9 @@ struct MultiCamView: UIViewControllerRepresentable {
         let button1 = createButton(withTitle: "1", target: context.coordinator, 
                                    action: #selector(context.coordinator.handleButton1(_:)))
         let button2 = createButton(withTitle: "2", target: context.coordinator,
-                                   action: #selector(context.coordinator.handleButton2))
-        let button3 = createButton(withTitle: "3", target: context.coordinator, 
-                                   action: #selector(context.coordinator.handleButton3))
+                                   action: #selector(context.coordinator.handleButton2(_:)))
+        let button3 = createButton(withTitle: "3", target: context.coordinator,
+                                   action: #selector(context.coordinator.handleButton3(_:)))
 
         viewController.view.addSubview(button1)
         viewController.view.addSubview(button2)
